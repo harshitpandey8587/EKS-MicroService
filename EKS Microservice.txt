@@ -94,7 +94,31 @@ docker top container-name se we can display the running process of a container
 <---------------------------------->
 <---------------------------------->
 Lec22
-at 3 min, Controller Manager ke components bataye hain ye mujhe nahi pta the pehle se: 
-Control plane ka ek componentaur bhi aur bhi hota hai apart from Controller Manager, etcd, kube-scheduler,api-server: Cloud Controller manager
-It is basically for cloud, on-premise k8s infra me ye component nahi hota hai.
-Eske i.e cloud controller manager ke 2-3 components hote hain, vo directly video me jakr dekh lo.
+->at 3 min, Controller Manager ke components bataye hain ye mujhe nahi pta the pehle se: 
+->Control plane ka ek component aur bhi aur bhi hota hai apart from Controller Manager, etcd, kube-scheduler,api-server: Cloud Controller manager
+->It is basically for cloud, on-premise k8s infra me ye component nahi hota hai.
+->Eske i.e cloud controller manager ke 2-3 components hote hain, vo directly video me jakr dekh lo.
+
+->99% cases me ek pod me ek he container hota hai, (it is always recommended to have so)
+kbi kbi ek pod me ek se zyada container hote hain to we call such containers : side-cars
+->These side cars are used to support main container ex-main contianer k liye data pull krke lane ke liye, main container ke logs kahi push krne ke liye etc etc
+
+Lec27
+->single pod creation with just a command dikhaya hai i.e without creating any manifest. at 2:50
+		->kubectl run <container-name> --image <repo-name/image-name>:<tag>
+
+->EKS me troubleshooting ke liye "describe" command is very imp, because usse we can get to know the events occured in the pod etc etc aur sath me
+ bht si details mil jati hain pod ke bare me
+ 
+Lec28
+->3 ways se we can expose our pods to outside: ClusterIP(pods will be accessible within cluster),NodePort,LoadBalancer(Specifically used with Cloud platforms)
+-> NodePort service jo hai usme IP kis hisab se kam krti hain ye btaya hai at  2 min ke as pas 
+
+Lec29 me Handson dikhaya hai NodePort service ka
+CLI se ek command me he agar kisi pod ko NODEPORT service ke through internet ko expose krna hai to uske liye ye command use kar skte hain:
+		->kubectl expose pod <Pod-Name>  --type=NodePort --port=80 --name=<Service-Name>
+		->kubectl expose pod my-first-pod  --type=NodePort --port=80 --name=my-first-service
+
+Fir "kubectl get service" karke check bhi kar skte hain ke hmari service bani ya nahi bani
+Now we can access our pod from internet using <public-ip-of-workernode>:<Node-port>					(nodeport mtlb vo jo 30000-32767 ke beech ki value thi)
+Service jo hoti hai vo accross worker nodes pe jati hai i.e jitne bhi worker nodes honge sbpe ek sath implement hoti hai(na ki kisi ek individual worker node pe)
