@@ -1,3 +1,45 @@
+Lec-8
+EKS cluster ke 4 components hote hain..
+1.Control plane
+2.Worker nodes(EC2 instances that are managed by us)
+3.Fargate Profiles (Instead of Ec2 we can run our app workload on fargate profiles)
+4. VPC (although ye part nai hota hai EKS ka but still it plays a very crucial role eslye we counted vpc here)
+$$$$$$$$$$$$$$$$$$$$$$
+->Fargate profiles only run on private subnets i.e minimum 1 pvt subnet hona he chaiye in our vpc if we want to run fargate profiles.
+->Suppose hmare worker node jo hain vo pvt subnet me hain so in order to establis a connection between such worker nodes and control plane NAT Gateways setup
+krna pdta hai. 
+$$$$$$$$$$$$$$$$$$$$$$
+Broader level pe jo EKS ka architecture hota hai:
+EKS Control plane has atleast 2 api servers and 3 etcd which runs across three AZ within a region.
+EKS control plane automatically detects unhealthy "Control plane" instances and replaces them.
+
+Worker Nodes i.e EC2 instances
+A node group is one or more ec2 instances deployed in an Ec2 ASG.
+All instances in a node group should have same instance type,same AMI and use the same "EKS worker node IAM Role"
+
+Fargate:
+Fargate is serverless  ye sb to pata hai.
+AWS Specially built Fargate controllers whose work is to identify  the pods belonging to fargate  and schedules them on fargate profiles
+
+VPC
+VPC is used for traffic flow from worker nodes to Control plane within the cluster,
+EKS Control planes are highly isolated from other control planes present in the same AWS account.
+
+<----------------------------------------->
+<----------------------------------------->
+<----------------------------------------->
+
+Lec-9
+
+Simple EKS cluster banane ka command run kiya hai, it takes around 15-20 min to create this.
+Fir hme "IAM OIDC provider for our EKS Cluster" ko banakr associate krna hota hai, AWS Console me krne jaenge to bht sare steps hote hain eske (it is possible
+that we make mistake there, eslye we will simply run a command on cli)
+
+
+<----------------------------------------->
+<----------------------------------------->
+<----------------------------------------->
+
 ->jb bhi hm eks create cluster  ya fir eksctl create nodegroup ye sb command run krte hain to api call jata hai CloudFormation ko
 Cloudformation he backend pe hmara ye sb cluster/worker nodes create krta hai.
 
