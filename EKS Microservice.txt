@@ -122,3 +122,4 @@ CLI se ek command me he agar kisi pod ko NODEPORT service ke through internet ko
 Fir "kubectl get service" karke check bhi kar skte hain ke hmari service bani ya nahi bani
 Now we can access our pod from internet using <public-ip-of-workernode>:<Node-port>					(nodeport mtlb vo jo 30000-32767 ke beech ki value thi)
 Service jo hoti hai vo accross worker nodes pe jati hai i.e jitne bhi worker nodes honge sbpe ek sath implement hoti hai(na ki kisi ek individual worker node pe)
+.
