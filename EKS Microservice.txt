@@ -1,0 +1,58 @@
+->jb bhi hm eks create cluster  ya fir eksctl create nodegroup ye sb command run krte hain to api call jata hai CloudFormation ko
+Cloudformation he backend pe hmara ye sb cluster/worker nodes create krta hai.
+
+-> Worker nodes me agar hme ye dekhna hai ke kon kon se inbound ports allowed hain to we need to see that security group jiske nam me "remote"
+likha hai.
+
+-> worker nodes ko outside internet se koi bhi insan access kr paye so for that we need to allow traffic All traffic from Anywhere 0.0.0.0/0
+-> Nodeport service basically dynamic ip generate krta hai for our worker nodes and we are able to access them using
+Worker_node_public_ip:dynamic_port
+
+<---------------------------------->
+
+Lec12 in Sec2 me pricing smjhayi hai EKS ki. Its imp becz sbi log interview me cost ki trf dhyan dete hain.
+
+->Just to Note: Worker nodes ko hm normal ec2 instance ki trh stop/start nahi kr skte, so we need to delete the worker nodes(node group) if we are
+not using it.
+
+->Cluster deletion ke liye ek bht bht bht imp point hai ke kbi kbi hme agar apne cluster delete krna hai , and suppose kuch changes hmne 
+manually bhi kar rakhe hain(to our resources that are created by EKS) apne aws console me EKS cluster me jakr, 
+to first we need to roll back our changes(Like SG me ports allow kiye the, to
+first we need to delete those rules manually, uske bad he hme cluster delete vala command chalana hai: eksctl delete cluster <cluster-name>)
+It is v imp to roleback our manual changes before deleting the cluster
+
+
+agar hm ye krna bhul jate hain to fir hme cloudformation me jakr manually bache hue resources ko ek ek krke delete krna hoga.
+<---------------------------------->
+<---------------------------------->
+<---------------------------------->
+
+Lec 19
+->Suppose Docker desktop download krliya windows/macOS me. fir ye command run kiya:
+docker run --name app1 -p 80:8080 -d stacksimplify/dockerintro-springboot-helloworld-rest-api:1.0.0-RELEASE
+
+
+->here 80 means hmare desktop ka port 80 ko hmne container ke port number 8080 se map kr diya hai.
+i.e First port is LOCAL PORT and the second 8080 is the CONTAINER PORT
+
+->V Imp to Note: So jo hmare system me localhost hota hai uska port hota hai 80
+So jb hm map kr denge apne 80 ko container ke 8080 se, fir apne system pe hmne agar ye run kiya http://localhost/hello
+to fir hm apne container ko access kr paenge.
+
+-> if we write docker ps -a -q  , to hme container id mil jaengi directly of the stopped container without showing any sort of faltu ki info about the container
+
+Lec20 me bhi Localhost ka exampole diya hai. 
+Image ki retagging bhi dikhai hai, ke suppose hme koi image banayi docker_hub_account/image_name:v1
+bad me hme laga ke v1 acha nahi lag rha to we retagged it to v1-Release and then we pushed this newly retagged image to docker hub
+
+Lec21
+docker stats command se we can display live stream of container resource usage strategy
+docker top container-name se we can display the running process of a container
+<---------------------------------->
+<---------------------------------->
+<---------------------------------->
+Lec22
+at 3 min, Controller Manager ke components bataye hain ye mujhe nahi pta the pehle se: 
+Control plane ka ek componentaur bhi aur bhi hota hai apart from Controller Manager, etcd, kube-scheduler,api-server: Cloud Controller manager
+It is basically for cloud, on-premise k8s infra me ye component nahi hota hai.
+Eske i.e cloud controller manager ke 2-3 components hote hain, vo directly video me jakr dekh lo.
