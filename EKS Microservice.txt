@@ -119,7 +119,37 @@ CLI se ek command me he agar kisi pod ko NODEPORT service ke through internet ko
 		->kubectl expose pod <Pod-Name>  --type=NodePort --port=80 --name=<Service-Name>
 		->kubectl expose pod my-first-pod  --type=NodePort --port=80 --name=my-first-service
 
+above command me we only gave service port i.e 80,basically system assumes here ke target port(i.e pod ka port) bhi 80 hai.
 Fir "kubectl get service" karke check bhi kar skte hain ke hmari service bani ya nahi bani
 Now we can access our pod from internet using <public-ip-of-workernode>:<Node-port>					(nodeport mtlb vo jo 30000-32767 ke beech ki value thi)
-Service jo hoti hai vo accross worker nodes pe jati hai i.e jitne bhi worker nodes honge sbpe ek sath implement hoti hai(na ki kisi ek individual worker node pe)
-.
+Service jo hoti hai vo sare worker nodes pe jati hai i.e jitne bhi worker nodes honge sbpe ek sath implement hoti hai(na ki kisi ek individual worker node pe)
+
+->agar hme service port kuch aur rakhna hai aur target port(i.e container port) kuch aur to fir hm vo bhi kar skte hain but uske liye hme alag se target port mention
+karna pdega apne command me
+		->kubectl expose pod my-first-pod  --type=NodePort --port=81 --target-port=80 --name=my-first-service3
+
+-> We can cross check services by kubectl get svc ya fir kubectl get service
+
+
+Lec30
+Realtime me pod ke logs ko kaise dekhte hain ye dikhaya hai. Infact 1:45 min pe ek link dikhaya hai where we can see different options
+used with kubectl log command, which is very useful while troubleshooting any pod
+
+Connect to any pod
+		->kubectl exec -it <pod-name> -- /bin/bash
+Bina container ke andar jaye bhi hm container me commands run kr skte hain: kubectl exec -it <pod-name> <jo-bhi-command-chalana-ho>
+
+		->Kisi bhi pod ki yaml file agar dekhni ho: kubectl get pod <pod-name> -o yaml
+Similarly kisi bhi service(ClusterIP,nodeport etc) ki agar yml file dekhni ho to we can execute:  kubectl get service <service-name> -o yaml
+
+Lec31
+Deletion dikhaya hai pod ka aur services ka.
+->if you want to get all the objects present in a namespace: kubectl get all
+
+
+Lec32
+Suppose hmare k8s pe hmne koi app host kr rakha hai, aur achank se traffic badh jata hai to we can handle the traffic by:
+1-Update ReplicaSet number,2-We can use kubectl scale command to do that, 3-We can enable the HorizontalPodAutoscaler to autoscale the pods 
+
+Lec32
+		-> to get the replicaset: kubectl get replicaset 
