@@ -153,3 +153,96 @@ Suppose hmare k8s pe hmne koi app host kr rakha hai, aur achank se traffic badh 
 
 Lec32
 		-> to get the replicaset: kubectl get replicaset 
+
+Further ye dikhaya hai ke RepicaSet ko as a Service kaise expose krte hain.
+Basically we create a service here.
+
+
+Further lectures me  Replica set ko badhana dikhaya hai (i.e Number of desired pods), and  internet ke through access krna dikhaya hai. 
+"ReplicaSet" and "Service" ko Delete krna dikhaya hai, Github pe doc ko check krlo usme ekdm saf saf achese commands likhe hain. 
+
+
+Lec35
+Whenever we create a Deployment bedefault a ReplicaSet is rolled out.
+Deployment maintains the version of our app, it stores last 10 versions by default
+Rollout and Rollback options are provided.
+We can scale scale up scale down
+We can pause and resume a deployment (i.e agar hmeapne app me suppose 10 changes krne hain to we dont want ke ek change kre fir sare pods ko recreate karen
+fir dusra change kare fir recreate, eslye pausing a deployment means, deployment ko pause krke eksath changes krlo ya fir ek ek krke he krlo jaisa theek lage
+then deployment ko resume krdo,usse vo sare changes hmare container me reflect hojaenge)
+Canary Deployment i.e live production environment me kisi change ko introduce krna
+
+Lec36
+Deployement create krne ke bad ek he command se hm apne ReplicaSet ko scale up and scale down kar skte hain:
+		-> kubectl scale --replicas=10 deployment/my-first-deployment 
+		->kubectl get deploy   (es command se we can see our deployment)
+Then Deployment ko as a Service expose krna dikhhaya hai (ek he command sehojata hai. {Similarly abi upar jaise replicaset ko expose kiya tha})
+
+Sir ne Deplyoment padhate time total 4 docker images ka use kiya hai so that vo hme version change krna i.e Rollback etc dikha saken.
+
+Lec37
+Application ki image ko update krna sikhya hai from version1 to version2 using set image, All these things are imp. 
+chaho to directly github repo se he padh lo
+		->#Get Container Name from current deployment
+		->kubectl get deployment my-first-deployment -o yaml
+
+		->#Update Deployment - (Upar vale command se hmne container name nikal lenge,fir usko neeche vale command me use kr lenge,dhyan rahe we talking about Container Name and not Pod Name)
+		->kubectl set image deployment/<Deployment-Name> <Container-Name>=<Container-Image> --record=true
+		
+jab bhi hm docker image ka version change krte hain ,basically ek new update rollout krte hain to fir by default ek new ReplicaSet create hojata hai.
+we can see it by "kubectl get rs"
+
+
+Lec38
+Updating application using Edit Deployment Approach
+		->kubectl edit deployment/<Deployment-Name> --record=true
+Kbi bhi deployment version history ko store krna ho to we write  --record=true, esse versioning ki details store hojati hain.
+
+Similarly jb hm teesra update dalenge apne deployment me hmare pas ek ReplicaSet automatically ban jaega firse
+Note: jb hm kubectl get rs karte hain to hme ReplicaSets ke nam show hojate hain, and jb hm "kubectl get pods" karte hain to hme pods ke nam
+dhyan dene vali bat ye hai ke pods ke nam me replicaSets ke naam ka bhi ek hissa hota hai.	
+
+Lec 39
+Maine ab ye approach start kr di hai -> main pehle github ka page khud padh leta hun fir uske bad 2x ki speed pe lecture dekh leta hun
+Yahan pe ek ek command likhne ka fayda nahi hai qki github ke page pe bht bht bht 2
+che se ,saf saf aur kafi informative way me likha hai.
+to I suggest ke usi page ko directly refer krlo.
+es lecture me Rollback krna dikhaya hai.
+
+Lec 40
+Pausing deployement and making all changes and then resuming the deployment.
+Note: jab bhi hm kubectl rollout history deployment/<our-deployment-name> 
+likhte hain to jo sbse last me record ata hai vahi apna current deployment hota hai.
+
+Ek bar pause command chala dene ke bad: kubectl rollout history deployment/<Deployment-Name>
+agar hm koi change krte bhi hain(ex-deployment version badal dena i.e deployment me koi new image dal dena/ ya fir ek change ka example hai-cpu and memory
+pe cap laga dena for our deployment) to hmare containers restart nahi hote hain
+
+
+Lec41
+Ye imp hai ,dekh lo direct lec, coz esme bataya hai ke jaise k8s me koi app hosted hai,use agar aws RDS se bat krni hogi to we need to setup "externalName" service
+aur agar pods ko apas me within cluster bat krni hogi to we need to setup ClusterIP service
+similarly outside users ke liye NodePort service/Ingress/LoadBalancer Service 
+
+Lec42
+Industry job ke liye ye lec imp hai bht, esme k8s ke namespaces ke bare me bhi mention kiya hai,
+Basically nginx ki conf file me backend deployment ka pura naam:8080 dena hota hai.
+to since we are in the same namespace eslye sirf deployment ka nam dene se kam chal jata hai but if we are in diff namespace to fir pura Cluster DNS hostname dena pdta hai.
+Yahi ek lecture imp hai. in practical terms. thosa sa confused hun main that how backend and frontend containers got connected?
+
+<---------------------------------->
+<---------------------------------->
+<---------------------------------->
+
+Lec44
+do tarah se list ko define krna dikhaya hai Manifest me, ye mujhe pehle se nai ata tha, mtlb confusition that ab clear hogya ahi
+
+Lec 45
+apiVersion v1 likhte hain hmlog manifest me, to vo kon sa version chalra hai currently ye kaha se dkhte hain ye dikhaya hai esme.
+
+Lec46/47/48 me Yaml file banana dikhaya hai, Simple pod ka, ReplicaSet ka, Services(NodePort) ka,Deployment ka
+mje ye nai pata tha ke Deployemnt.yml alag banti hai and Services.yml alag , I mean hme agar kisi RS/Deployement ko agar as a Service expose krna hai
+to uske liye specifically hme alag se ek services nam ki yml file banani hoti hai.
+ye lectures kafi similar hain Bhupendra Rajput se, but still informative hain.
+
+Ek sath 2 yml files bhi hm run kr skte hain: kubecctl -f apply file.yml -f file2.yml
