@@ -246,3 +246,16 @@ to uske liye specifically hme alag se ek services nam ki yml file banani hoti ha
 ye lectures kafi similar hain Bhupendra Rajput se, but still informative hain.
 
 Ek sath 2 yml files bhi hm run kr skte hain: kubecctl -f apply file.yml -f file2.yml
+
+
+Lec50
+Es lecture me Deployment and Services ki Yaml file bana ke dikhai hai, This lec is imp for writing manifest in K8s
+jaise har chez ka ek  profarma hota hai ke services ki yml banaenge to usme kya kya chiz hoti hai ..
+Vaise he Deployment ka pattern kch thooooda sa alag hota hai.(Ex- Deployment yml me replicas,selector,template ye teen object hote hain)(Vaise he Services ki yml file me type,selector,ports yeteen object hote hain spec: ke neeche)
+2x ki speed pe dkh lo lect, ache se pattern smjh ajaega
+Mtlb jaise kisi POD ki yml file me alag trah se port ko allow kiya jata hai, vahi kis Services ki Yaml me Ports ko kisi alag trah se define kiya jata hai yaml file me.
+(Yad hai Services ko export krne me --port aur --target-port define krna pdta tha? nahi yad hai to refer line number 129 in this file)
+
+
+When we are writing Backend Cluster service port(i.e apne backend ek pods ke liye jo bhi service(eg ClusterIP type ki) vali yml likhenge usme name of the  Service is very imp, 
+qki hmare case me hmne front me es hisab se coding kari hai ke it will only route the traffic to a service jiska naam "my-backend-service" hoga)
