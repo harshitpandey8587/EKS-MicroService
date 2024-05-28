@@ -1,0 +1,1019 @@
+Lec-8
+EKS cluster ke 4 components hote hain..
+1.Control plane
+2.Worker nodes(EC2 instances that are managed by us)
+3.Fargate Profiles (Instead of Ec2 we can run our app workload on fargate profiles)
+4. VPC (although ye part nai hota hai EKS ka but still it plays a very crucial role eslye we counted vpc here)
+$$$$$$$$$$$$$$$$$$$$$$
+-> 
+->Suppose hmare worker node jo hain vo pvt subnet me hain so in order to establis a connection between such worker nodes and control plane NAT Gateways setup
+krna pdta hai. 
+$$$$$$$$$$$$$$$$$$$$$$
+Broader level pe jo EKS ka architecture hota hai:
+EKS Control plane has atleast 2 api servers and 3 etcd which runs across three AZ within a region.
+EKS control plane automatically detects unhealthy "Control plane" instances and replaces them.
+
+Worker Nodes i.e EC2 instances
+A node group is one or more ec2 instances deployed in an Ec2 ASG.
+All instances in a node group should have same instance type,same AMI and use the same "EKS worker node IAM Role"
+
+Fargate:
+Fargate is serverless  ye sb to pata hai.
+AWS Specially built Fargate controllers whose work is to identify  the pods belonging to fargate  and schedules them on fargate profiles
+
+VPC
+VPC is used for traffic flow from worker nodes to Control plane within the cluster,
+EKS Control planes are highly isolated from other control planes present in the same AWS account.
+
+<----------------------------------------->
+<----------------------------------------->
+<----------------------------------------->
+
+Lec-9
+
+Simple EKS cluster banane ka command run kiya hai, it takes around 15-20 min to create this.
+Fir hme "IAM OIDC provider for our EKS Cluster" ko banakr associate krna hota hai, AWS Console me krne jaenge to bht
+ sare steps hote hain eske (it is possible
+that we make mistake there, eslye we will simply run a command on cli)
+
+Esme command diya hai eks cluster creation ke,ye dekh kr he kabhi bhi banana cluster because simply eks create cluster kr dene
+ se vo node group bhi
+sath me bana deta hai and node group me jo ec2 instancse hain vo m4.large size ke hote hain
+"--without-nodegroup" is imp
+
+eksctl create cluster --name=eksdemo --region=us-east-1 --zones=us-east-1a,us-east-1b --without-nodegroup
+
+
+In this way we are creating only cluster(basically control plane) separately, and after this we will be creating our node group separately
+<----------------------------------------->
+
+Lec-10
+To enable and use AWS IAM roles for Kubernetes service accounts on our EKS cluster,
+ we must create & associate OIDC(IAM Open ID Connect) identity provider.
+eksctl utils associate-iam-oidc-provider \
+    --region region-code \
+    --cluster <cluter-name> \
+    --approve
+
+# Replace with region & cluster name
+eksctl utils associate-iam-oidc-provider \
+    --region us-east-1 \
+    --cluster eksdemo1 \
+    --approve
+	
+	
+then eske bad hm Key-pair banaenge aws pe,bcz kbhi bhi incase hme kisi worker node se connect krna pde to we can do it via our key-pair
+Worker node ultimately kya hain? hain to sb ec2 instance he na. SO unke liye key-pair banaya hai.
+
+################# IMP
+Now we will write the command to create worker node, See that command from github vala page:(https://github.com/harshitpandey8587/aws-eks-kubernetes-masterclass/blob/master/01-EKS-Create-Cluster-using-eksctl/01-02-Create-EKSCluster-and-NodeGroups/README.md)
+Es command me ek jagh key-pair ka nam use hua hai , to vo vhi nam dalna hai jis name ki key abi hmne banayi thi aws console me
+
+eksctl create nodegroup --cluster=eksdemo1 \
+                       --region=us-east-1 \
+                       --name=eksdemo1-ng-public1 \
+                       --node-type=t3.medium \
+                       --nodes=2 \
+                       --nodes-min=2 \
+                       --nodes-max=4 \
+                       --node-volume-size=20 \
+                       --ssh-access \
+                       --ssh-public-key=kube-demo \
+                       --managed \
+                       --asg-access \
+                       --external-dns-access \
+                       --full-ecr-access \
+                       --appmesh-access \
+                       --alb-ingress-access 
+
+####
+Node group ban jane ke bad we can verify with commands like , kubectl get nodes
+kubectl get nodes -o wide
+	
+	
+<----------------------------------------->
+Lec 11
+Sbse pehle to ye check krnge ke hmara eks cluster ka jo nodegroup hai vo Public subnet me hai ya nahi.
+Ye aws console pe check krna hota hai, lect dkh kr he smjh aega
+
+
+eksctl ke thrrogh we should enable the logging of our eks cluster, it will help us in longer run
+
+
+github pe 4-5 commands diye hain like to View: 1. List EKS Clusters 2.List NodeGroups in a cluster  
+3.to see the config context of our eks cluster:  kubectl config view --minify
+
+
+##############
+IAM role lagane ke do tareeke hote hain, one is ke jo bhi policies attach krni ho vo directly hm apne IAM role me dede, and vo IAM role EKS Cluster se directly attach kr den(which is our case just above)
+
+Dusra tareeka hai that we  create a k8s service and a IAM role and then attach them and then define the container ke esko kya kya access dena hai, ye hm aage ke lectures me  dkhge
+
+
+Es lecture me zyadatar verification dikhaaya hai ke bhaiya dekh lo sahi se ke NAT Gateway bana ke nhi bana AWS Console pe, IAM role bana ke nhi bana
+CloudFormation stack bana k nhi bna
+
+Then last me apne security group me inbound traffic from anywhere bhi kar diya hai,bcz agar nodeport service bhi use krenge jb
+to uske liye bhi access from anywhere outside the world is required, so that we can test our application going forward
+
+<----------------------------------------->
+
+->jb bhi hm eks create cluster  ya fir eksctl create nodegroup ye sb command run krte hain to api call jata hai CloudFormation ko
+Cloudformation he backend pe hmara ye sb cluster/worker nodes create krta hai.
+
+-> Worker nodes me agar hme ye dekhna hai ke kon kon se inbound ports allowed hain to we need to see that security group jiske nam me "remote"
+likha hai.
+
+-> worker nodes ko outside internet se koi bhi insan access kr paye so for that we need to allow traffic All traffic from Anywhere 0.0.0.0/0
+-> Nodeport service basically dynamic ip generate krta hai for our worker nodes and we are able to access them using
+Worker_node_public_ip:dynamic_port
+
+<---------------------------------->
+
+Lec12 in Sec2 me pricing smjhayi hai EKS ki. Its imp becz sbi log interview me cost ki trf dhyan dete hain.
+
+->Just to Note: Worker nodes ko hm normal ec2 instance ki trh stop/start nahi kr skte, so we need to delete the worker nodes(node group) if we are
+not using it.
+<---------------------------------->
+
+Lec13
+->Cluster deletion ke liye ek bht bht bht imp point hai ke kbi kbi hme agar apne cluster delete krna hai , and suppose kuch changes hmne 
+manually bhi kar rakhe hain(to our resources that are created by EKS) apne aws console me EKS cluster me jakr, 
+to first we need to roll back our changes(Like SG me ports allow kiye the, to
+first we need to delete those rules manually, uske bad he hme cluster delete vala command chalana hai: 
+eksctl delete cluster <cluster-name>)
+It is v imp to roleback our manual changes before deleting the cluster
+
+
+Going forward hmlog IAM role me bhi kuch policies attach krenge , 
+but jb cluster delete krne ki baari aegi to fr hme manually pehle vo policies
+detach krni pdegi uske bad he cluster sahi se delete hoega
+
+
+
+
+If you want to delete only nodegroup then uske liye bhi ek command hai: eksctl delete nodegroup --cluster=<clustername> --name=<NodeGroupName>
+agar hm ye krna bhul jate hain to fir hme cloudformation me jakr manually bache hue resources ko ek ek krke delete krna hoga.
+
+
+Kbhi bhi cluster delete krne ke bad ek bar cloud formation dekh zrur lena ke ,
+jaise EKS Cluster NAT gateway banaata hai and Network Load balancer bhi
+banata hai ye sb check kr lena ke delete hua ya nahi.
+<---------------------------------->
+<---------------------------------->
+<---------------------------------->
+
+Lec 19
+->Suppose Docker desktop download krliya windows/macOS me. fir ye command run kiya:
+docker run --name app1 -p 80:8080 -d stacksimplify/dockerintro-springboot-helloworld-rest-api:1.0.0-RELEASE
+
+
+->here 80 means hmare desktop ka port 80 ko hmne container ke port number 8080 se map kr diya hai.
+i.e First port is LOCAL PORT and the second 8080 is the CONTAINER PORT
+
+->V Imp to Note: So jo hmare system me localhost hota hai uska port hota hai 80
+So jb hm map kr denge apne 80 ko container ke 8080 se, fir apne system pe hmne agar ye run kiya http://localhost/hello
+to fir hm apne container ko access kr paenge.
+
+-> if we write docker ps -a -q  , to hme container id mil jaengi directly of the stopped container without showing any sort of faltu ki info about the container
+
+Lec20 me bhi Localhost ka exampole diya hai. 
+Image ki retagging bhi dikhai hai, ke suppose hme koi image banayi docker_hub_account/image_name:v1
+bad me hme laga ke v1 acha nahi lag rha to we retagged it to v1-Release and then we pushed this newly retagged image to docker hub
+
+Lec21
+docker stats command se we can display live stream of container resource usage strategy
+docker top container-name se we can display the running process of a container
+<---------------------------------->
+<---------------------------------->
+<---------------------------------->
+Lec22
+->at 3 min, Controller Manager ke components bataye hain ye mujhe nahi pta the pehle se: 
+->Control plane ka ek component aur bhi aur bhi hota hai apart from Controller Manager, etcd, kube-scheduler,api-server: Cloud Controller manager
+->It is basically for cloud, on-premise k8s infra me ye component nahi hota hai.
+->Eske i.e cloud controller manager ke 2-3 components hote hain, vo directly video me jakr dekh lo.
+
+->99% cases me ek pod me ek he container hota hai, (it is always recommended to have so)
+kbi kbi ek pod me ek se zyada container hote hain to we call such containers : side-cars
+->These side cars are used to support main container ex-main contianer k liye data pull krke lane ke liye, 
+main container ke logs kahi push krne ke liye etc etc
+
+Lec27
+->single pod creation with just a command dikhaya hai i.e without creating any manifest. at 2:50
+		->kubectl run <container-name> --image <repo-name/image-name>:<tag>
+
+->EKS me troubleshooting ke liye "describe" command is very imp, because usse we can get
+ to know the events occured in the pod etc etc aur sath me
+ bht si details mil jati hain pod ke bare me
+ kubectl describe pod <podname>
+ 
+Lec28
+BDSNA (4-5 min ka hai yr dkh dalo fatak se)
+->3 ways se we can expose our pods to outside: ClusterIP(pods will be accessible within cluster),NodePort,
+LoadBalancer(Specifically used with Cloud platforms)
+-> NodePort service jo hai usme IP kis hisab se kam krti hain ye btaya hai at  2 min ke as pas 
+
+Lec29 me Handson dikhaya hai NodePort service ka
+CLI se ek command me he agar kisi pod ko NODEPORT service ke through internet ko expose krna hai to uske liye ye command use kar skte hain:
+		->kubectl expose pod <Pod-Name>  --type=NodePort --port=80 --name=<Service-Name>
+		->kubectl expose pod my-first-pod  --type=NodePort --port=80 --name=my-first-service
+
+above command me we only gave service port i.e 80,basically system assumes here ke target port(i.e pod ka port) bhi 80 hai.
+Fir "kubectl get service" karke check bhi kar skte hain ke hmari service bani ya nahi bani
+# Get Service Info
+kubectl get service
+kubectl get svc
+# Get Public IP of Worker Nodes
+kubectl get nodes -o wide
+Access the Application using Public IP
+http://<node1-public-ip>:<Node-Port>
+
+Now we can access our pod from internet using <public-ip-of-workernode>:<Node-port>					(nodeport mtlb vo jo 30000-32767 ke beech ki value thi)
+Service jo hoti hai vo sare worker nodes pe jati hai i.e jitne bhi worker nodes honge sbpe ek sath implement hoti hai(na ki kisi ek individual worker node pe)
+
+->agar hme service port kuch aur rakhna hai aur target port(i.e container port) kuch aur to fir hm vo bhi kar skte hain but uske 
+liye hme alag se target port mention
+karna pdega apne command me
+		->kubectl expose pod my-first-pod  --type=NodePort --port=81 --target-port=80 --name=my-first-service3
+
+-> We can cross check services by kubectl get svc ya fir kubectl get service
+
+
+Lec30
+Realtime me pod ke logs ko kaise dekhte hain ye dikhaya hai. Infact 1:45 min pe ek link dikhaya hai where we can see different options
+used with kubectl log command, which is very useful while troubleshooting any pod
+
+Connect to any pod
+		->kubectl exec -it <pod-name> -- /bin/bash
+Bina container ke andar jaye bhi hm container me commands run kr skte hain:
+ kubectl exec -it <pod-name> <jo-bhi-command-chalana-ho>
+
+		->Kisi bhi pod ki yaml file agar dekhni ho: kubectl get pod <pod-name> -o yaml
+Similarly kisi bhi service(ClusterIP,nodeport etc) ki agar yml file dekhni ho to we can execute:  kubectl get service <service-name> -o yaml
+
+Lec31
+Deletion dikhaya hai pod ka aur services ka.
+->if you want to get all the objects present in a namespace: kubectl get all
+
+
+Lec32
+Suppose hmare k8s pe hmne koi app host kr rakha hai, aur achank se traffic badh jata hai to we can handle the traffic by:
+1-Update ReplicaSet number,
+2-We can use kubectl scale command to do that, 
+3-We can enable the HorizontalPodAutoscaler to autoscale the pods 
+
+Lec32
+		-> to get the replicaset: kubectl get replicaset 
+		Further ye dikhaya hai ke RepicaSet ko as a Service kaise expose krte hain.
+Basically we create a service here.
+
+ReplicaSet ki yml file bhi dikhayi hai(vohi same Bhupinder vali)
+
+ReplicaSet ko kisi kubectl command se nhi banaya ja skta hai, it can be created via yml file only
+kubectl get replicaset
+kubctl describe rs <replica-set-name>
+Further lectures me  Replica set ko badhana dikhaya hai (i.e Number of desired pods), and  internet ke through access krna dikhaya hai. 
+"ReplicaSet" and "Service" ko Delete krna dikhaya hai, Github pe doc ko check krlo usme ekdm saf saf achese commands likhe hain. 
+
+
+Verify the owner of the pod by: kubectl get pods <podname> -o yaml
+
+
+Lec34
+Expose ReplicaSet as a Service
+kubectl expose rs <replica-set name> --type=NodePort --port=80 --target-port=8080 --name=<NodePort Service Name>
+
+Deletion bhi dikhaya hai 
+
+Lec35
+Whenever we create a Deployment bedefault a ReplicaSet is rolled out.
+Deployment maintains the version of our app  
+Rollout and Rollback options are provided.
+We can scale scale up scale down
+We can pause and resume a deployment (i.e agar hmeapne app me suppose 10 changes krne hain to we dont want ke ek change kre
+ fir sare pods ko recreate karen
+fir dusra change kare fir recreate, eslye pausing a deployment means,
+ deployment ko pause krke eksath changes krlo ya fir ek ek krke he krlo jaisa theek lage
+then deployment ko resume krdo,usse vo sare changes hmare container me reflect hojaenge)
+We can do Canary Deployment (i.e live production environment me kisi change ko introduce krna)via Deployement
+
+Lec36
+kubectl create deployment <Deplyment-Name> --image=<Container-Image>
+Deployement create krne ke bad ek he command se hm apne ReplicaSet ko scale up and scale down kar skte hain:
+
+		-> kubectl scale --replicas=10 deployment/my-first-deployment 
+		->kubectl get deploy   (es command se we can see our deployment)
+Then Deployment ko as a Service expose krna dikhhaya hai (ek he command sehojata hai. {Similarly abi upar jaise replicaset ko expose kiya tha})
+kubectl expose deployment <Deployment-Name>  --type=NodePort --port=80 --target-port=80 --name=<Service-Name-To-Be-Created>
+kubectl get svc
+
+Sir ne Deplyoment padhate time total 4 docker images ka use kiya hai so that vo hme version change krna i.e Rollback etc dikha saken.
+
+Lec37
+Update Deployment using Set Image option
+Application ki image ko update krna sikhya hai from version1 to version2 using set image, All these things are imp. 
+chaho to directly github repo se he padh lo
+		->#Get Container Name from current deployment ki yaml file
+		->kubectl get deployment my-first-deployment -o yaml
+
+		->#Update Deployment - (Upar vale command se hmne container name nikal lenge,fir usko neeche vale command me use kr lenge,dhyan rahe we talking about Container Name and not Pod Name)
+		->kubectl set image deployment/<Deployment-Name> <Container-Name>=<Container-Image> --record=true
+		
+IMPORTANT- jab bhi hm docker image ka version change krte hain ,basically ek new update rollout krte hain to fir by default ek new
+ ReplicaSet create hojata hai.
+we can see it by "kubectl get rs"
+
+
+Kbhi bhi agar database ke containers ko update krna ho to there we canuse recreate strategy for updating the deployment,bcz recreate krne ka mtlb hia
+sare pods ko stop karke eksth recreate krega but99.99 percent cases me we use default strategy i.e rolling update vali(one after the other)
+
+Suppose hm describe krke dekhna chahte hain deployement ko to bhi we can do it
+like this: kubectl describe deployment <deployemnt name> 
+Ek trh se activity log mil jata hai esse
+
+
+Suppose hm rollout history dekhna chahte hain apne deploynent ki:
+kubectl rollout history deployment/<Deployment-Name>
+
+
+Lec38
+Updating application using Edit Deployment Approach(Last lect me hmne set-image vala approach dekha tha)
+		->kubectl edit deployment/<Deployment-Name> --record=true
+Kbi bhi deployment version history ko store krna ho to we write  --record=true, esse versioning ki details store hojati hain.
+
+
+Suppose hmne apne deployment ki yml me change krdiya and then save bhi kr diya in vim editor
+Then hme agar rollout ka status dekhna ho to :
+kubectl rollout status deployment/<your-deployement-name>
+
+Similarly jb hm teesra update dalenge apne deployment me hmare pas ek ReplicaSet automatically ban jaega firse
+Note: jb hm kubectl get rs karte hain to hme ReplicaSets ke nam show hojate hain, and jb hm "kubectl get pods" karte hain to hme pods ke nam
+dhyan dene vali bat ye hai ke pods ke nam me replicaSets ke naam ka bhi ek hissa hota hai.	
+
+
+<----------------------------------------------->
+Lec 39
+Maine ab ye approach start kr di hai -> main pehle github ka page khud padh leta hun fir uske bad 2x ki speed pe lecture dekh leta hun
+Yahan pe ek ek command likhne ka fayda nahi hai qki github ke page pe bht bht bht 2
+che se ,saf saf aur kafi informative way me likha hai.
+to I suggest ke usi page ko directly refer krlo.
+es lecture me Rollback krna dikhaya hai.
+
+kubectl rollout history deployment/<Deployment-Name>
+
+Suppose hm ye dekhna chahte hain ke es particular revision me kya yml file thi? basically kya tha es revision me then we can give a specific 
+number of the revision to know more details of it, Like this:
+kubectl rollout history deployment/<Deployement-name> --revision=<jo sa bhi number dalna ho vo dal do revision ka>
+Aisa krne ke bad ANNOTATIONS me reflect hojaega ke actually me kya change kiya gya tha es revision me
+
+
+# Undo Deployment(i.e just pichle deployment pe agar vaps rollback krna ho to)
+kubectl rollout undo deployment/my-first-deployment
+
+
+# Rollback Deployment to Specific Revision:(first check revision number via kubectl rollout history deployment/<Deployment-Name> command)
+kubectl rollout undo deployment/my-first-deployment --to-revision=3
+
+IMP
+Suppose I want to restart all of my pods present in my deployment due to some mem issues or for whatever cause we can do
+kubectl rollout restart deployment/<your deployment  name>
+
+
+Lec 40
+Pausing deployement and making all changes and then resuming the deployment.
+Note: jab bhi hm kubectl rollout history deployment/<our-deployment-name> 
+likhte hain to jo sbse last me record ata hai vahi apna current deployment hota hai.
+
+Ek bar pause command chala dene ke bad: kubectl rollout history deployment/<Deployment-Name>
+agar hm koi change krte bhi hain(ex-deployment version badal dena i.e deployment me koi new image dal dena/
+ ya fir ek change ka example hai-cpu and memory
+pe cap laga dena for our deployment) to hmare containers restart nahi hote hain
+
+iF we dont pause our deployement then suppose hm 3 changes krne hain apne deployement me to har change ke bad jaise he hm
+deployment ko save krenge to sbhi existing pod gets terminated and recreated
+
+How to pause a deployment:
+kubectl rollout pause deployement <deployement-name>
+
+
+Now whatever command we want we can run ,like suppose we want to change the image of our deployement using set image command,upar maine likha hua hai ye command in some lect.
+kubectl set image deployement/<deployment-name> <image url> --record=true 
+
+Since abi to hmne deployment ko pause krke rakha hai, we can verify that abi hmara deployment number badha nahi hoga, 
+using this command: kubectl rollout history deployment/<deployement-name>
+
+We can also set resource limit using kubectl i.e hmare kisi container ke liye hme agar koi limit set krni ho to we can do it like this:
+kubectl set resources deployement/<deployement-name> -c=<container-name> --limits=cpu=200m,memory=512Mi
+in the above command 512mb ram and 200 cpu is way more than our current infra in the tutorial, etna nhi krna hai.because bill bht aega nhi to
+
+
+
+How to resume a deployment:
+kubectl rollout resume deployment/<deployement-name>
+
+
+How to delete a deployment
+kubectl delete deployment/<deployement-name>
+
+Similarly we need to delete the service as well using: sevice kubectl delete svc <service name>
+
+<------------------------------------------------------->
+Lec41
+
+
+What are kuberenetes service: (I learned from gpt: pod,deployment,nodeport,configmaps and secrets,ingress,persistent volumes and pvc,statefulsets)
+However KDaida sir mentioned: clusterIP, NodePort,LoadBalancer,Ingress,externalName
+ClusterIP:used for communication b/w applications inside k8s cluster (ex frontendneed to communicate withbacken)
+Ingress: it is an advanced Load Balancer which provides context path based routing,SSL,SSL redirect and many more(ex aws alb)
+exteranlName: to access externally hosted apps,or databases inside your k8s cluster we can use externalName service,ye service cli commands se nahi ban skti ,we need towrite yml file for this
+
+
+Ye imp hai ,dekh lo direct lec, coz esme bataya hai ke jaise k8s me koi app hosted hai,use agar aws RDS se bat krni hogi to we need to
+ setup "externalName" service
+aur agar pods ko apas me within cluster bat krni hogi to we need to setup ClusterIP service
+similarly outside users ke liye NodePort service/Ingress/LoadBalancer Service 
+
+<----------------------------------->
+Lec42
+(https://github.com/harshitpandey8587/kubernetes-fundamentals/tree/master/05-Services-with-kubectl)
+jab bhi kbhi clusterIP service hm banate hain  using kubectl command then --type=ClusterIP dene ke zrurt nhi hoti hai bcz it is by default assumed by k8s
+
+In this lect ingress controller pod yad hai GPT pe dekha tha? 
+to vhi Nginx controller pod ki configuration dikhai hai.
+basically ese 'reverse proxy' kehte hain.
+
+
+We can also create custom docker image related to our reverse proxy. this is shown in this lect.
+Vse ye lec dekh he lo qki custom docker image with reverse proxy configuration is only required in industry.
+
+Industry job ke liye ye lec imp hai bht, esme k8s ke namespaces ke bare me bhi mention kiya hai,
+Basically nginx ki conf file me backend deployment ka pura naam:8080 dena hota hai.
+to since we are in the same namespace eslye sirf deployment ka nam dene se kam chal jata hai but if we are in diff namespace to fir pura Cluster DNS hostname dena pdta hai.
+Yahi ek lecture imp hai. in practical terms. thosa sa confused hun main that how backend and frontend containers got connected?
+
+
+Explaination: frontend ka jo docker file hai usme nginx ki conf file ko copy kiya hai.
+jo conf file hai usme http://my-backend-service:8080
+ye mention kiya hai basically backend deployement ki jo service hai i.e ClusterIP usko mention kar diya hai so that FE and BE can communicate #
+with each other.
+
+fir backend ki deployment ko scale up kr ke dikha diya hai: kubectl scale --replicas=10 deployment/my-backend-rest-app
+
+bht acha lect hai, dkh lo maja ajaega
+
+<---------------------------------->
+<---------------------------------->
+<---------------------------------->
+
+Lec44
+do tarah se list ko define krna dikhaya hai Manifest me, ye mujhe pehle se nai ata tha, mtlb confusition that ab clear hogya ahi
+
+Vaise halke me na lo es yml file banane ko , jo ki bataya gaya hai lec 45, ,46,47,48 etc me, qki thoda bht changes rehte he hain apas me
+to chaho to dekh lo bas , koi notes ki zrurt nhihai bas yaad rkhne k liye dkh lo.
+
+
+Lec 45
+apiVersion v1 likhte hain hmlog manifest me, to vo kon sa version chalra hai currently ye kaha se dkhte hain ye dikhaya hai esme.
+
+
+
+Lec 46
+
+Ek chiz notice krna that jb bhi service kiyml file likhte hain to usme selector: dete time matchLabels: nahi likhte hain
+where as deployment ki yml file likhte time matchLables likhte hain for giving label and its values
+
+Aur jo ports: hota hai usme bhi koi containerPort karke kuch nhi likhte hai, directly port se related 
+info dete hain jaise name port targetPort nodePort
+
+
+Lec46/47/48 me Yaml file banana dikhaya hai, Simple pod ka, ReplicaSet ka, Services(NodePort) ka,Deployment ka
+[IMPORTANT] mje ye nai pata tha ke Deployemnt.yml alag banti hai and Services.yml alag , I mean hme agar kisi RS/Deployement ko agar as a 
+Service expose krna hai
+to uske liye specifically hme alag se ek services nam ki yml file banani hoti hai.
+ye lectures kafi similar hain Bhupendra Rajput se, but still informative hain.
+
+Ek sath 2 yml files bhi hm run kr skte hain: kubecctl -f apply file.yml -f file2.yml
+
+gpt PE Deployment strategies dkh skte hain: rolling update, recreate fashion etc
+
+Lec50
+Es lecture me Deployment and Services ki Yaml file bana ke dikhai hai, This lec is imp for writing manifest in K8s
+jaise har chez ka ek  profarma hota hai ke services ki yml banaenge to usme kya kya chiz hoti hai ..
+
+Vaise he Deployment ka pattern kch thooooda sa alag hota hai.(Ex- Deployment yml me replicas,selector,template
+(template ke andar metadata aur spec:)  ye teen object hote hain)
+(Vaise he Services ki yml file me type,selector,ports yeteen object hote hain spec: ke neeche)
+
+2x ki speed pe dkh lo lect, ache se pattern smjh ajaega
+Mtlb jaise kisi POD ki yml file me alag trah se port ko allow kiya jata hai, vahi kis Services ki Yaml me Ports 
+ko kisi alag trah se define kiya jata hai yaml file me.
+(Yad hai Services ko export krne me --port aur --target-port define krna pdta tha? nahi yad hai to refer line number 129 in this file)
+
+
+When we are writing Backend Cluster service port(i.e apne backend ek pods ke liye jo bhi service(eg ClusterIP type ki)
+ vali yml likhenge usme name of the  Service is very imp, 
+qki hmare case me hmne front me es hisab se coding kari hai ke it will only route the traffic to a service jiska naam "my-backend-service" hoga)
+Lec 42 me jo kam CLI commands se kiya tha vhi kam ab yml files se krne ja rhe hain. simple hai sbkch
+
+
+Ek chiz notice krna that jb bhi service kiyml file likhte hain to usme selector: dete time matchLabels: nahi likhte hain
+where as deployment ki yml file likhte time matchLables likhte hain for giving label and its values
+Aur jo ports: hota hai usme bhi koi containerPort karke kuch nhi likhte hai, directly port se related info dete hain jaise name port targetPort nodePort
+<--------------------->
+
+Lec52
+Suppose koi folder hai xyz nam ka ,uske andar 4 yml file padi hai(directly present ,recursively present nhi), so we can apply each yml file
+using the folder name like this: kubectl apply -f xyz/
+similarly delete ka bhi hai: kubectl delete -f xyz/
+we can verify using kubectl get all
+
+<--------------------->
+<--------------------->
+<--------------------->
+<--------------------->
+Lec 53
+(https://github.com/harshitpandey8587/aws-eks-kubernetes-masterclass/tree/master/04-EKS-Storage-with-EBS-ElasticBlockStore)
+EKS storage 
+1. In-Tree EBS Provisioner(Depricated)
+2. EBS CSI Driver
+3. EFS CSI Driver
+4. FSx for Luster CSI (basically used for persistent volume mounts)
+
+EBS can be mounted with Ec2 and container instances,they are exposed as storage volumes that persist independently
+We can dynamically change the config of the ebs volume attached to any instance
+Handson ke liye ek case liya hai, es case ko krne ke liye we need to learn about Storagr Class,PVC,Config Map , Env Variable,
+Volumes,VolumeMount  , ClusterIP Service,Deployment,etc
+Sbhi ke manifest banane honge
+
+To test this app sir has created a simple sringboot microservice
+so that database sahi se storage ka use kr pa rha hai ya nhi for its CRUD operations
+
+Lec 54
+IAM policy banayi hai EBS ke liye,basically worker nodes jo IAM role use kr rhe hongi usme  ye IAM policies attach kr denge, so that worker nodes
+present in the EKS Cluster can access the EBS volumes from AWS
+
+Policy ka document dkha ho to seedha lect se dekhlo(kul mila kr 10-12 permissions di hai related to ebs, CRUD operations etc)
+
+now we want to know the IAM role associated with our worked node,for that we can use this command:
+kubectl -n kube-system describe configmap aws-auth
+From output check: "rolearn"
+Alternative tareeka hai (to find associated IAM role)simply aws console me se worker node ke description me dekh lojakr
+
+in order to attach the ebs csi driver,hme github ki repo ka link hai usko install krna pdta hai.
+kubectl apply -k "github.com/kubernetes-sigs/aws-ebs-csi-driver/deploy/kubernetes/overlays/stable/?ref=master"
+
+jo bhi latest version hoga ebs csi driver ka ye vhi version install kr dega
+
+Ye command maine yaha se liya hai(https://github.com/harshitpandey8587/aws-eks-kubernetes-masterclass/tree/master/04-EKS-Storage-with-EBS-ElasticBlockStore/04-01-Install-EBS-CSI-Driver)
+actually me ye k8s ki officail git repo se he fetch krke la rha hai
+
+After installing if we want to verify the installed csi driver or not, we can check using:
+kubectl get pods -n kube-system
+Esme ebs-csi-controller and ebs-csi-node karke pods ban gye honge
+
+<---------------------------->
+Lec 55 (imp hai, 5 manifest banana dikhaya hai.) Storage Class, Persistant Volume Claim, Config Maps,
+Sari yml files yaha pardi hain: https://github.com/harshitpandey8587/aws-eks-kubernetes-masterclass/tree/master/04-EKS-Storage-with-EBS-ElasticBlockStore/04-02-SC-PVC-ConfigMap-MySQL/kube-manifests
+
+Abtk maine kbhi nhi dekhi thi ye sb yaml files
+ye lec BDSNA, sari yml files download krke rakh lo kahi pe local system me
+
+to see storage classes in k8s: kubectl get scale
+To see Persistent volume claims: kubectl get pvc       (in our case status will be "Pending" bcz we allocated 
+volumeBindingMode: WaitForFirstConsumer while defining storage class yml file)
+<-------------------------------------------------------------------------------------->
+Lec 56
+In this lec we will create mysql deployment manifest, and esko banane ke sath we will also create env variables,volumes,volume mounts
+Basically deployment ki yml file hai, but selector ke neeche strategy define kari hai(vhi strategy jo ek interview me puchi gyi thi)
+There are two strategies 1. roling update 2.recreate
+
+Es lect me jo yml file banayi hai deployment ki, link below:
+(https://github.com/harshitpandey8587/aws-eks-kubernetes-masterclass/blob/master/04-EKS-Storage-with-EBS-ElasticBlockStore/04-03-UserManagement-MicroService-with-MySQLDB/kube-manifests/04-mysql-deployment.yml)
+vo kafi lambi hai mtlb volume mount wgreh dikhaya hai
+(basically do volume banaye hain [1.Persistant volume 2.ConfigMap for DB creation]
+ and fir unko pod me mount kr diya hai) to ,ye lect dkh lo qki aise written
+text se smjh nhi aega. bcz kaha kaha ke name same honge(mtlb jaise pvc ki yml file me jo nam diya hai 
+vhi nam deployment ki yml file me bhi mention krna hai) ye imp hai
+
+Since mysql ka ek he pod hoga pure cluster me, basically we are not going to scale it up or down
+in this case while defining the ClusterIP sevice yml file , we can give ClusterIP: Node ,this None means while are going to use pod IP directly#
+https://github.com/harshitpandey8587/aws-eks-kubernetes-masterclass/blob/master/04-EKS-Storage-with-EBS-ElasticBlockStore/04-03-UserManagement-MicroService-with-MySQLDB/kube-manifests/05-mysql-clusterip-service.yml
+BDSNA
+
+
+ConfigMap ki ek yml file banayi thi,usme data jo hota hai vo key-value pair ke form me hota hai
+key means the name of the file that you want to create and value means the content which you want in that file
+to jb hmne config-map ki yml file ko apne pod ke volume me mount kr diya , to fir vo config-map vali jo file hogi vo  ban kar execute hojaegi
+mountPath: /docker-entrypoint-initdb.d
+Ye command imp thi while writing deployment.yml
+Maine gpt se pucha tha to ache se smjh me agya tha config map ka sara system, es link pe gpt ka answer given hai: https://chatgpt.com/c/9d9cf57b-89b3-452c-b49a-cce0d46c8d81
+Ekbar dekh lo yr,ache se ajaega config map ka system.
+
+
+Lec 57
+# Connect to MYSQL Database
+kubectl run -it --rm --image=mysql:5.6 --restart=Never mysql-client -- mysql -h mysql -pdbpassword11
+es command ko explain kiya hai in lec
+kubectl run -it --rm --image=mysql:5.6 --restart=Never mysql-client -- mysql -h mysql -pdbpassword11
+https://chatgpt.com/c/9d9cf57b-89b3-452c-b49a-cce0d46c8d81    (Es link pe dkh lo gpt se maine explanation bhi liya hai es command ka)
+
+Lec58
+Jab sir lec record kr rhe the(tb EBS CSI ka version 0.5 tha) to PV ki resizing and snapshots dono he chize Alpha version of k8s me thi mtlb development horha tha enpe
+but abi maine check kiya that currently 1.3 version of EBS CSI is being used
+To sir ne ye dikhaya hai ke PV resizing and snapshots ki yml file unhone bana kr rakh di hain github pe
+agar zrurt pde to check kr lena
+
+Lec59 
+esme do yml files bana ke dikhayi hain(ek deployment aur ek NodePort service) for client side interaction i.e 
+
+Lec60
+es lec me postman ki help se api call karke dikhai hai ,basically hmare k8s cluster me jo database hai in container
+uspe crud ops perform krke dikhaya hai
+Problem Observation:
+If we deploy all manifests at a time, by the time mysql is ready our User Management Microservice pod will be restarting multiple times due to unavailability of Database.
+To avoid such situations, we can apply initContainers concept to our User management Microservice Deployment manifest.
+problem soved in lec 64
+
+<----------------------------------------------------------->
+<----------------------------------------------------------->
+<----------------------------------------------------------->
+<----------------------------------------------------------->
+<----------------------------------------------------------->
+Lec 62
+Ab yaha se notes nahi banaunga direct github  ki readme.md file se padh lo, time bht waste hora hai
+agar notes banaunga bhi to bas commands ke
+
+secret.yml me db ka password dal diya hai base64 encode krke,
+aur deployment.yml file me env variable me secret ki value dal di hai, so basically deployment.yml ke env variable mechange hua hai ,dkhlena
+
+Lec 64
+Init containers in k8s
+these are side car containers jo ki main app container ke pehle run krte hain, in order to install any sort of dependencies
+there can be more than one init container in a deployement, only thing is ek ek karke chalte(i.e ek ke bad ek) hain ye init containers
+and sare init containers ko successfully run hona zruri hai in order to start our main app container
+
+Basically jo microservice vala depoyment.yml thi, usme problem aarhi thi ke vo pehle he start ho ja rha tha aur jbki hmara sql server vala pod
+tbtk start nahi ho pa rha tha eslye gadbad hori thi(mtlb ki client is ready but server is not ready)
+eslye microservice vali deployment file me initContainers mention kr diya hai with a shell script(shell script ka kam hai sql server vale pod ko ping krna)
+To jaise he sql server up and runnign ho jata hai , uske bad microservice vala pod (jo ki acting as a client) vo bhi create hojata hai
+
+
+
+kubectl get pods -w
+this command means we can get the pods in watch mode,mtlb we can see the execution
+
+
+Lec 65
+3 type ke probes hote hain k8s me
+
+1. Liveness probe: kubelet uses liveness probe to knw when to restart a container.
+LP could catch a deadlock where an app is running but unable to make progress,
+the LP restarts containers in such cases ,basically restarting helps in such cases
+
+2.Readiness probe:Kubelet uses readiness probes to know when a container is ready to accept traffic,
+So kul milakr jbtk readiness probe successful nhi hojati we dont allow that pod to accept traffic.When a pod is not ready it is removed from
+Service Load Balancers based on readiness probe signal..
+
+3.Startup Probe:Kubelet uses readiness probes to know when a container applicaton has started.
+Firstly this prob DISABLES livenss & readiness probes until it succeeds ensuring those pods dont interfere with app startup
+This can be used to adopt liveness checks on slow starting containers, avoinding them getting killed by the kubelet before they are up and running
+<-------------->
+3 tarike se probes ko define kiya ja skta hai,lec dekh lo bhosdoooo.
+
+1. check using commands
+2. check using httpd GET request
+3.check using TCP
+but ye depend krta hai hmare app architecture pe ke hm kis hisab se prob ko implement krna chahte hain.
+
+Lec66: me demo krke dikhaya hai liveness and readiness probes ka
+
+
+Lec67:
+K8s resources request and limits
+basically resource limit for our containers inside the pod
+
+		resources:
+            requests:
+              memory: "128Mi" # 128 MebiByte is equal to 135 Megabyte (MB)
+              cpu: "500m" # `m` means milliCPU
+            limits:
+              memory: "500Mi"
+              cpu: "1000m"  # 1000m is equal to 1 VCPU core  
+			  
+Resource limit bas smjhane ke liye btaaya hai because its obvious ke hmlog autoscaling (vertical /horizontal) enable karke he rakhte hain
+eks clusters me, to agr autoscaling enabled hai to fr resource limit ka koi matlb nahi reh jata hai.
+qki automatically resource autoscale hojate hain fr
+
+We will remove this part of yml file in upcoming videos bcz limit laga dene se hmare t3.medium worker nodes pe laod pdega when we are trying to scale up our number of pods
+to fr vo pending state me chale jaenge
+
+Lec68
+Namespaces:
+ k8s and kdaida sir encourages alot to use namespaces
+ 
+ generally 4 namespaces log banate hain industry me dev,qa,staging,prod
+ 
+ Benefits: creates isolation boundary from other k8s object
+			we can limit the rsources like cpu memory on per namespace basis
+			
+To get the list of existing namespaces:			
+kubectl get namespace
+
+kube-system: allthe k8s system related objects are created under this namespace
+there are two more namespace that are already present in k8s they are kube-node-lease and kube-public
+
+kubectl get all --namespace kube-system     (ya fr aise bhi likh skte hain kubectl get all -n kube-system)
+
+To get existing namespaces:
+kubectl get ns
+
+How to create a namespace using cli command:
+kubectl create namespace <name-of-namespace>
+
+UseMgmg NodePort service ki yml file yad hai? usme hmne nodePort diya tha ek jagah 312321
+what is this 31231? ye hmare nodePort tha 
+but jb hm ek se zyada namespace use krenge cluster me to fr to problem hojaegi na
+bcz one port cannot be shared for more than one namespaces
+afetr commenting this nodeport in service.yml is going to be dynamic 
+
+whenever you want to apply any manifest in any particular namespace then,write this command
+kubectl apply -f <folder-name> -n <namespace-name>
+
+
+IMP: in order to access our application presend in some namespace hme node ki ip chaiye hogi,
+we can get nodeip via: kubectl get nodes -o wide
+
+Service port janne ke liye we will execute below command:
+kubectl get svc -n <namespace-name>
+
+Catch: jo PV aur SC hote hain these are not bound to be in a namespace mtlb ye generic k8s objects hain to we can simply see them using kubectl get pv,sc
+
+SC and PV are not specific to a namespace,however jab enhe query krte hain hm to usme path likh kr ajata hai ke kis namesapce me attached hain ye
+
+Delete everything that is present in a namespace:
+kubectl delete -f <folder-name> -n <namespace-name>
+There is another way to do it as well
+like we can delete the namespace itself: kubectl delete ns <namesapce-name>
+
+Check kr lena shyd storage class ko alag se delete krna pdta hai
+
+
+Lec70
+Last time abi resource  limit lagayi thi ek container me in terms of cpu and memory
+Bar bar vo code snipped har container ki yml me na likhna pde eslye we can simply crate a LimitRange.yml file,but make sure to place it in dir in such a way that sbse pehle vhi execute hoega
+
+aur we can associate this yml file to our namespace, usse ye hoga ke ek particular namespace me agar koi bhi  container banega to fir vo usi
+resource limit ke sath banega.
+Yml file dikhai hai es lect me limitRange ki
+
+Lec71 me likhkr dikhaya hai yml
+K8s terraform ki trh intelligent nhi hai to alphabetical order me manifest create krta hai .
+
+
+Lec73#
+Resource Quota
+Namespace ke upar hard limits bhi laga skte hain hmlog using Resource Quota
+Like es namespace me 5 se zyada pod nahi banne chaiye, memory limit ye hogi, pvc bhi 5 ho skte hain max, secrets bhi 6 he ho skte hain es
+namespace me bas, es trh ki limits laga skte hain on any namespace
+
+yml file dikhayi hai resource quota ki,suppose hmne yml file bana li hai then we can search for Resource quota like this:
+kubectl get quota -n <namespace-name>
+
+<------------------------------------------------->
+<------------------------------------------------->
+<------------------------------------------------->
+<------------------------------------------------->
+
+Lec 74
+Abtk jo hmne sql server vala container bana kr crud ops kr rhe the it is extremly bad practice
+(jis az me ebs tha usi az me sql server vala pod bhi hona chiaye etc etc aur b bht demerits hain), we should opt for aws RDS
+externalName service yad hai? cluster ke andar ke resources ko agar bahr ki koi aws service use krni hotihai to we deploye externalName service
+
+[IMPORTANT]
+Es lec me new architecture dikhaya hai that how everying is places within VPC / EKS Cluster / public Subnets/ RDS
+Database should always be present in private subnet
+abi to hmlog ek front facing container ko public subnet me rakh de rhe hain but aage chalkr,hm aage ke lectures me dekhenge that
+sare containers pvt subnet me he bnenge and public subnet me ALB hoga bas.
+
+aisa he kch bola h sir ne lec me
+
+Lec75
+pvt subnet me rds instance banane k liye ek SG lagega,to vo SG bana kr dikhaya hai aur ports allow kiye hain 3306 on aws console
+RDS me jakr DB-Subnet-group create kiya hai on aws console[ye mujhe pehle se nhi  pta tha, i.e RDS instance banane k liye hme Subnet-group bbi create krna pdta hai,
+basically hmlog apne pvt subnets ko select krte hain usme bcz we want rds instance to be created in pvt subnet]
+
+While creating RDS instance hmlog apne SG ko mention krenge jo abhi upr esi lecture me banaya tha and subnet group ko bhi mention krenge
+
+We will also see that how to connect to our database instance (from within the cluster)
+bahar se nhi access kr skte hain bcz we defined our rds instance in pvt subnet
+
+RDS instance ban jane ke bad uska endpoint copy krlena ,bcz we will use this endpoint while configuring external name service
+yml file rakh di hai es folder me local system me(ghar ke laptop me)(D:\DevOps study\AWS\EKS Microservice\EKS-MicroService\yml files\06-EKS-Storage-with-RDS-Database)
+
+kubectl get svc
+
+jab ye externalName service bana di hai ,uske bad ek new container bana kr test  kiya hai that whether we are able to access our RDS instance or now
+kubectl run -it --rm --image=mysql:5.7.22 --restart=Never mysql-client -- mysql -h <endpoint-of-rds-instance> -u dbadmin -pdbpassword11
+dbadmin is username of db and passwrd jo hai vo rds instance banate time diya tha.
+mysql-client is the container name
+
+<------------------------------------------------->
+<------------------------------------------------->
+<------------------------------------------------->
+<------------------------------------------------->
+Lec77
+[IMPORTANT] Architecture dikhaya hai, dkhlo idea lag jaega, bas ALB ki jagh classic LB use kr liya hai.
+lkin fr bhi architecture dkhlo ek nzr
+
+abhi tk hmare worker nodes jo the vo public subnet me the, but now we want worker nodes to bein pvt subnet for that we are deleting exisitng worker nodes
+and then recreating them in pvt subnet
+
+eksctl get nodegroup --cluster=eksdemo1
+eksctl delete nodegroup <Nodegroup-name> --cluster <cluster-name>
+
+--node-private-networking
+bas ye tag add kr dena while writing that (eksctl create nodegroup --cluster=eksdemo1 \ vala )command
+
+Lec79
+Jo service.yml hoti hai usme service me NodePort likha hua tha usko hata kr Loadbalancer likh diya hai
+and nodePort:31231 jo likha tha ye line hata di hai
+in order to attach a loadbalancer
+
+Sir aisa bhi bolre the ke nodePort sevice ko expose krna in prod env is not good practice bcz DNS wgreh hota hai actual prod me.
+aur jo port tha 8095 usko change krke 80 kr diya hai.
+
+spec:
+	type: LoadBalancer
+	selector:
+		app: usermgmt-restapp
+	ports:
+      - port: 80   	80 is the default port of the browser, eska mtlb ab hme jb b application ko reach krna hoga we can simply use LB ka Link
+	    targetPort: 8095
+
+Lec80
+Creating NLB via manifest
+same rhengi sb manifest as used in CLB, bas ek he manifest me change hoga 
+I have placed that in local system:
+
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-type: nlb    # To create Network Load Balancer
+
+<------------------------------------------------->
+<------------------------------------------------->
+<------------------------------------------------->
+<------------------------------------------------->
+Lec82
+tne sare topics cover krna ja rhe hain sir, maja ajaega padh kr:
+ AWS LB Controller install,ingress,context path routing,
+ingress SSL, ingress SSL Redirect, External DNS install,Ingress+ External DNS,k8s Service + External DNS,Ingress Name based Virtual Host Routing
+SSL Discovery -TLS,Ingress Groups,Intress Target Type -IP,Ingress Internal ALB
+
+Sbke bare me one-liner intro bhi diya hai sir ne.chaho to dekh lo,4 min kalec hai
+<------------------------------------------------->
+Lec83
+ALB ke benefits bataye hain like it supports path-based routing,host-based routing,support for containerized applications(ECS),monitoring health of each service
+support for registering targets by IP address,including targets outside the VPC for the load balancer(VERY IMP)
+
+(https://eksctl.io/getting-started/)
+eksctl ki official website ko refer kr skte hain for future, kbhi b zrurt pde to
+
+ALBIC(ALB Ingress Controller)(Ab depricate ho chuka hai)
+it triggers the creation of AWLB and necessary supporting aws resources
+annotation used: kuberenetes.io/ingress.class: alb
+
+ALBIC jo hai vo do type ki routing provide krta tha
+1.INstance Mode: Traffic coming to ALB is routed to the underlying worker node ec2 instance
+2.IP mode: Traffic coming to ALB is routed to the pod ip directly.(This is beneficial specifically in case of fargate profiles jaha pe ec2 instances nhi hote h)
+Note: Fargate profiel ke sath jb EKS kam krta hai to Fargate does not support nodePOrt service
+Whereas EKS with Ec2 me dono he modes lagaye ja skte hain Instance mode and IP mode
+By default insatnce mode laga hota hai
+
+[ARCHITECTURE hai ALBIC ka but dekhne ki zrurt nhi hai qki ye depricate hochuka hai]
+Jo bhi ye ALB wghreh bante hain vo sb ingress manifest ki vjh se bante hain,so if we want to delete everything simply ingress manifest ko delete krdo
+
+
+Lec84
+ALBIC depcripate hogya hai ,now its renamed as AWS LoadBalancer Controller
+pehle ALBIC jab banate the to bas ALB create hota tha
+but with AWS LoadBalancer Controller, now we can also create Network LoadBalancer for our cluster and route traffic accordingly.
+
+
+For creating ALB we are going to use K8s object named as : Ingress Resource
+For creating NLB we are going to use K8s object of type SERVICE and make sure to annotate it with "nlb"
+
+[ARCHITECTURE Dikhaya hai -dekh lo imph h]
+
+AWS LB Controller jb hm banate hain to uske liye k8s ke andar ek service account banana pdta hai,service account ke andar AWS IAM Role ka nam
+annotate krna pdta hai, (yes ofcouse IAM ROLE me policies bhi attach krni hoti hain so that hmara "AWS LB Controller" ek new ALB ko create/update/delete kr paye on our aws account)
+Once we create AWS LB Controller,backend pe AWS LB Controller Deployment banta hai, AWS LBC WebHook Cluster IP Service banti hai,AWS LB TLS secret banti hain
+
+Lec85
+kubectl ke sever version aur client version se related ek bat batayi hai, dkhlo chudau.
+
+Fir eksctl se related commands ko revisitkiya hai yahan(https://github.com/harshitpandey8587/aws-eks-kubernetes-masterclass/tree/master/08-NEW-ELB-Application-LoadBalancers/08-01-Load-Balancer-Controller-Install)
+https://github.com/harshitpandey8587/aws-eks-kubernetes-masterclass/tree/master/08-NEW-ELB-Application-LoadBalancers/08-01-Load-Balancer-Controller-Install
+eksctl get nodegroup --cluster=eksdemo1
+eksctl get iamserviceaccount --cluster=eksdemo1
+
+Configure Kubeconfig for kubectl:
+aws eks --region <region-code> update-kubeconfig --name <cluster_name>
+Like This: aws eks --region us-east-1 update-kubeconfig --name eksdemo1
+
+The place where kubeconfig file resides is: /home/<user-name>/.kube/config
+
+Troubleshoot,kbhi agar hm apne local system se apne remote eks cluster pe koi command hit krte hain like
+ we execute kubectl get pods,aur output nahi aa rha hai to fir update your kube config file with the above command.
+ Esse hota ye hai ke hmara local system sync me ajata hai remote eks cluster ke
+ 
+ 
+Lec86
+ek iam policy document hai github peusko download krke IAM policy bana li hai using AWS CLI command,
+(https://github.com/harshitpandey8587/aws-eks-kubernetes-masterclass/tree/master/08-NEW-ELB-Application-LoadBalancers/08-01-Load-Balancer-Controller-Install)
+now ab ek single eks command se hmlog ek k8s service account banaenge and ek IAM role banaenge and we will annotate the 
+service account with the IAM Role
+all this will be performed with single eks command. 
+
+We will check ke pehle se koi k8s service account(with this name 'aws-load-balancer-controller') to nhi present hai kube-system namespace me.
+kubectl get sa aws-load-balancer-controller -n kube-system
+
+we can check what all service account(sa) are present in kube-system namespace using below command:
+kubectl get sa -n kube-system
+
+Now vo command jo sa aur IAM Role create krega aur iam role me policy ko bhi attach kr dega, and yes sa aur IAM role ko bind krega eksath
+eksctl create iamserviceaccount \
+  --cluster=my_cluster \
+  --namespace=kube-system \
+  --name=aws-load-balancer-controller \ #Note:  K8S Service Account Name that need to be bound to newly created IAM Role
+  --attach-policy-arn=arn:aws:iam::111122223333:policy/AWSLoadBalancerControllerIAMPolicy \
+  --override-existing-serviceaccounts \
+  --approve
+  
+Now verify the sa bana ya nhi
+eksctl  get iamserviceaccount --cluster eksdemo1
+
+Now after creation we can also describe the newly created service account like this:
+kubectl describe sa aws-load-balancer-controller -n kube-system
+
+
+Lec87 
+Yaha se notes banana tough hogya hai ,eslye directly dkhlo
+Helm wgreh dikhaya hai.
+https://github.com/harshitpandey8587/aws-eks-kubernetes-masterclass/tree/master/08-NEW-ELB-Application-LoadBalancers/08-01-Load-Balancer-Controller-Install
+
+https://chatgpt.com/c/a78c463e-f909-4c78-8cbf-c426f73e3126  -> es chat me maine helm gpt se helm ka overview liya hai
+
+
+# Add the eks-charts repository.
+helm repo add eks https://aws.github.io/eks-charts
+
+# Update your local repo to make sure that you have the most recent charts.
+helm repo update
+
+Generic syntax of installing a release using helm chart
+helm install <release-name> <repo-name>/<chart-name>
+
+
+Helm command to deploye aws-load-balancer-controller
+helm install aws-load-balancer-controller eks/aws-load-balancer-controller \
+  -n kube-system \
+  --set clusterName=<cluster-name> \
+  --set serviceAccount.create=false \
+  --set serviceAccount.name=aws-load-balancer-controller \
+  --set region=<region-code> \
+  --set vpcId=<vpc-xxxxxxxx> \
+  --set image.repository=<account>.dkr.ecr.<region-code>.amazonaws.com/amazon/aws-load-balancer-controller
+
+
+Ye above vala command run krne ke bad we can check for the available deploymentin our kube-system namespace, ek new depoyment ban gya
+hoga with the name aws-load-balancer-controller
+
+
+Lec 88
+Ye lec dekh dalo qki aws-load-balancer-controller banane ke bad jo bhi chize backend pe deploy hoti hain(webhook clusterIP service,deployment,secret-tls)
+en sbko verify krke dikhaya hai using commands and -o yaml files.
+
+Lec89
+Esme bhi verification he dikhaya of the underlying resources created due to AWS LB CONTROLLER creation
+
+Lec 90
+Uninstall aws lb controller using HELM command
+This is only for info purpose,we dont need to execute this command
+helm uninstall aws-load-balancer-controller -n kube-system 
+
+Lec91
+Ingress Class
+If we have multiple ingress controllers running in our k8s cluster then how to identify to which ingress controller our ingress resource service should be associated to?#
+IngressClass ki yml file banayi hai,I have downloaded it in local system.
+(https://github.com/harshitpandey8587/aws-eks-kubernetes-masterclass/tree/master/08-NEW-ELB-Application-LoadBalancers/08-01-Load-Balancer-Controller-Install)
+There are many ingress controllers present in the market.
+IngressClass ki yml file me ek controller:  hota hai usme hm mention krte hain ke kon sa ingress controller se hm associate krna chahte hain apne ingress resources ko
+
+Video me ingress resource ki bhi yml file dikhayi hai.but aage lectures me ache se explain krenge 
+Ye lec dkhlo to ache se smjh ajaega yml file of ingress
+However gpt se maine pucha tha ingress class and resource ke bare me (https://chatgpt.com/c/5212e831-1de0-4e75-8b38-76851986d052)
+
+# Verify IngressClass Resource
+kubectl get ingressclass
+
+# Describe IngressClass Resource
+kubectl describe ingressclass my-aws-ingress-class
