@@ -1,0 +1,1272 @@
+
+Lec93
+[IMPORTANT ARCHITECTURE] Yahi to dhund rha tha main etne din se
+Ingress jo hai uske 2 backends ho skte hain ek defaultBackend and ek me hm khud ke rules dete hain
+but dhyan se pattern notice kroge to 
+service:
+	name: <nodePort Service Name>
+	port:
+      number: 
+	  
+	  Etna pattern same he hai
+	  
+Lec94
+Ingress controller aur ingress resoruce ka demo krna hai hmlog ko basically to uske liye ek deployement aur nodePort service ki bhi zrurt pdegi
+to es lect me bas deployment aur nodePort service bana kr dikhayi hai.
+
+Lec95
+Creation of ingress resorucemanifest with 'defaultBackend'
+bht acha lec hai, esme dikhaya hai ke annotations: section me jobhi details hm dete hain vo sb aws pe infra bankar ajata hai 
+(mtlb jse agar ALB bana rhe hain to ALB se related bht se parameters diye hain in annotations block)
+puri ingress resource ki yml bana kr ache se dikhaya hai.
+
+bas backend me specific path na lekr defaultBackend ka use kiya hai.
+
+Lec96
+Verification kiya hai after implementing ingressclass vali yml, aur ingress resource vali yml file
+like AWS console pe ALB bana ya nhi bana ye sb dikhaya hai, target group me kya kya hai.
+ports kon kon se open hai etc etc
+
+Target-type dikhaya hai: i.e instance
+2 type ke hote hain yaad hna? instance aur IP
+
+na yaad ho to lec 93 dkh lena usme architecture banate smay bataya hai 
+
+Lec97
+badhiya lec hai regarding ingress with rules.
+pehle mujhe bhi dikkat hui smjhne me ke bhai jab ALB ka url run kr rhe hain browser pe to nginx ka default page q aarha hai
+bad me last me smjh agya
+vo eslye aa rha tha qki rules me / mention kiya tha i.e koi bhi admi / esme jaega(i.e ALB ka url bas simply run krega to fir usko meri  nodePort service ki trf route kr do)
+
+bad me sir ne jab / ki jagh /app1 kar diya in ingress resource manifest tb fr ALB ka url chalna band hogya.
+
+<---------------------------------------------------->
+<---------------------------------------------------->
+<---------------------------------------------------->
+<---------------------------------------------------->
+<---------------------------------------------------->
+
+Lec98
+[IMPORTANT ARCHITECTURE]
+Proper dikhaya hai kaise host based routing me ingress controller kaha pe hota hai, vo k8s ki apiserver ko monitor krta rehta hai for any incoming ingress service manifest
+jaise he ingress resource ki manifest ati hai vo usi ke according ALB banata hai aws console pe
+Note: ALB aur ingress service ek he chiz hai,mtlb ek he entity hai, bas aws ke context me smjhne ke liye hmlog use ALB keh dete hain.
+aur k8s ke andar usko ingress service kehte hain.
+
+INgress service jo hoti hai usi me rules likhe hote hain routing ke.
+
+Lec99
+Pehle yad hai ingress vali manifess me he hmlog annotations: vale block me healthcheck se related annotations dal dete the.
+tb aisa eslye krte the qki our healthcheck was COMMON for all the backend applicatoins
+
+but ab hmare pas backend me 3 app-server run ho rhe hain i.e 3 pod run ho rhe hain alag-alag services ke. PodA for app1 service,PodB for app2 service and Pod3
+but suppose ab ek se zyda app run ho rhe hain hmare backen pe to fir ye jo healthcheck vala part hai ye Service level manifest me shift krna pdega
+(qki hm har app-server ke lie alag se health check rkna chahte hain)
+like jo NodePort service vali manifest hai har microservice ki,to usi me mention krna pdega health check
+
+
+name:
+labels:
+annotations:
+
+	alb.ingress.kubernetes.io/healthcheck-path: /app1/index.html
+
+service manifest me ye line add hojaegi 
+
+Es Lec me teeno app-server pods ke service.yml aur deployment.yml file ko dikhaya hai.
+<--------------------------->
+Lec100
+Ingress service ki yml file bana kr dikhai hai,muje to ache se smjh aarha hai sbkuch ingress me.
+context-path-routing dikhayi hai.
+ke kaise ingress service ki yml file me rules likhe hain for diff apps deployed in our cluster
+
+spec:
+  ingressClassName: my-aws-ingress-class   # Ingress Class                  
+  rules:
+    - http:
+        paths:      
+          - path: /app1
+            pathType: Prefix
+            backend:
+              service:
+                name: app1-nginx-nodeport-service
+                port: 
+                  number: 80
+				  
+
+# Deploy Kubernetes manifests
+kubectl apply -f kube-manifests/
+
+# List Pods
+kubectl get pods
+
+# List Services
+kubectl get svc
+
+# List Ingress Load Balancers
+kubectl get ingress
+esko krne se hme ingressClass ka nam milta hai aur jo hmara ALB bana hota hai uska DNS-name bhi mil jata hai
+
+# Describe Ingress and view Rules
+kubectl describe ingress ingress-cpr-demo
+
+# Verify AWS Load Balancer Controller logs
+kubectl -n kube-system  get pods 
+kubectl -n kube-system logs -f aws-load-balancer-controller-794b7844dd-8hk7n 
+
+Further verification dikhaya hai es lect me jaise ALB jo bana hai aws console pe usme sahi se rules define hue hain ye nahi yai sb
+
+Lec101
+ingress rules define krne me priority order bht imp hota hai.
+if we give /* as the first rule to problem hojaegi for remaining other rules.
+eslye alwasy try to give the root url in the last rule among all the rules defined in ingress service
+
+Ingress resources ka cleanup i.e deletion is v imp bcz eski vjhse he backend me ALB banta hai, and ALB costs us alot
+
+IMP: Instead of defining a rule for ROOT CONTEXT, we can also give the defaultBackend (jo abi 2-3 lectures pehle padha tha)
+Smjhe? nhi smjhe? mtlb ki ek he ingress service vali yml file me defaultBackend bhi mention kr dena aur sath me 'rules:' bhi mention kr dena
+
+<------------------------------->
+<------------------------------->
+<------------------------------->
+<------------------------------->
+
+Lec102
+[IMPORTANT ARCHITECTURE]
+pura eks ka architecture dikhaya hai along with SSL(issued by ACM) and DNS i.e ROute53
+
+Lec103
+Route53 pe ek new domain name purchase krke dikhaya hai bas
+
+Lec104
+Imp hai agar tmhe dns aur ssl ko bind kaise krte hain apas me esme confusion hai
+ek wildcard ssl certificate generate kiya hai ACM se via */<domain-name>.com
+fir validation pending that to usko validate kiya hai, like simply CNAME records ko add krna pdta hai route53 me jakr hostedzone me jakr.
+
+
+Lec105
+Ingress service ki yml file me jo annotations hote hain usme ssl ko kaise mention krna hai ye sb dikhaya hai
+Lec 100 me total 4  files thi , to 3 file (to as it is he rhengi bas jo ingress-service vali yml file thi usme kch changes kiye hain) 
+jaise ingress-service ka nam change kiya hai, alb jo bnega aws console pe uska nam change kiya hai,
+annotations me jakr 2 new chiz add kari hai  
+ek to listen-ports(for our alb), dusra certificate-arn like this:
+
+## SSL Settings
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443}, {"HTTP":80}]'
+    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:us-east-1:180789647333:certificate/632a3ff6-3f6d-464c-9121-b9d97481a76b
+    #alb.ingress.kubernetes.io/ssl-policy: ELBSecurityPolicy-TLS-1-1-2017-01 #Optional (Picks default if not used)  
+
+Fir ek subdomain banaya hai route53 me jiski destination me ALB(hmlg ka ingress ne jo alb banaya hai) usko mention kiya hai
+mtlb ab jab bhi hm es subdomain ke sath koi path denge to fir hm destination pod pe phoch jaenge 
+
+so that ab hmlog kisi sub-domain ke sath bhi securely apne pods ko access kr sakenge
+<sub-domain>.<domain-name>.com/<context-path>
+
+inour case context path was app1/index.html	 ,app2/index.html	
+
+Lec106
+[IMPORTANT ARCHITECTURE] esme SSL redirect kaha pe ata hai architecture me vo dikhaya hai
+abi tk jb hm http:// krke apne domain name pe jare the to secured connection nhi tha, in this lec we will see how to redirect http to https
+
+bas ye annotation add kr diya hai in ingress service annotation me   
+# SSL Redirect Setting
+    alb.ingress.kubernetes.io/ssl-redirect: '443'  
+
+OFFICIAL WEBSITE FOR ANNOTATIONS: https://kubernetes-sigs.github.io/aws-load-balancer-controller/v2.4/guide/ingress/annotations/
+
+<------------------------------->
+<------------------------------->
+<------------------------------->
+<------------------------------->
+
+Lec107
+[IMPORTANT ARCHITECTURE]  ExternalDNS
+Eske pehle ke lectures me hmne khud manually jakr ROute53 me jo hosted zone tha usme DNS record add kiya tha i.e ek subdomain banaya tha 'A' Record ka and uska
+target kiya tha ALB ko.
+But with ExternalDNS these things can be automatically achieved just by adding a annotations(related to externalDNS) in k8s ingress service Or  in a k8s service, 
+Ingress service ya suppose koi normal k8s service me annotation(related to externalDNS) add kr dene se automatically hmare route53 me DNS record add hojaega
+
+Not only addition of records but we can also perform CRUD operations on dns records present in route53
+
+Architecture smjhaaya hai,default namespace me ek service-account banana hoga for externalDNS, aws console pe iam policy banani hogi for crud ops on route53
+then 
+1.	externalDNS pod,
+2.  externalDNS-deployment,
+3.	externalDNS-clusterRole,
+4.	externalDNS-ClusterRoleBinding will be deployed
+(en charon chizo ki manifest hai sir ke pas, uski help se he ye deploy hongi)
+
+Fir jaise he koi ingress service hm deploy krte hain to external-DNS-pod goes to k8s-apiserver and accordingly searches for the annotations(related to ExternalDNS)
+and then CREATE/UPDATE/DELETE records  in route53
+
+Lec108
+Socho ingress service ki yml file kitni imp hai, bcz esi me hmlog annotation ke form me DNS records bhi likhte hain ,sath me neeche spec: me jakr rules: me context based routes bhi likhte hain
+<subdomain>.<domain-name>.com/<context-url>
+
+eksctl create iamserviceaccount \
+    --name service_account_name \
+    --namespace service_account_namespace \
+    --cluster cluster_name \
+    --attach-policy-arn IAM_policy_ARN \
+    --approve \
+    --override-existing-serviceaccounts
+
+service account ban jane ke bad we can verify: kubectl get sa 
+kubectl describe sa <service-account-name>
+
+IAM Role jo banega uska arn chaiye hoga(bcz aage chalkr service account ki jo  manifest me ye mention krna hoega so that IAM role ki madad se Route53 me records add updatee hoskte),
+ ab chaho to aws consoole se lelo ya fir ye command run krke bhi mil jaega
+eksctl get iamserviceaccount --cluster <cluster-name>
+
+Lec109
+sabhi yml files dikhayi hain screen pe aur ye bhi dikhaya hai ke kaise configure krna hai external-dns ko
+mujhe thoda kam kam smjh aaya hai abi, but theek hai jb kbi externalDNS ki zrurt hogi tb ki tb dkh lenge ye lec to ajaega step by step
+yaha pe yml file hai charon chizon ki(https://github.com/harshitpandey8587/aws-eks-kubernetes-masterclass/blob/master/08-NEW-ELB-Application-LoadBalancers/08-06-Deploy-ExternalDNS-on-EKS/kube-manifests/01-Deploy-ExternalDNS.yml)
+
+
+lec 111
+ingress-service ke annotation vale block me es trh se hmlog de skte hain sub-domain ki entries:
+  # External DNS - For creating a Record Set in Route53
+    external-dns.alpha.kubernetes.io/hostname: dnstest1.kubeoncloud.com, dnstest2.kubeoncloud.com  
+
+Ingress service ko deploy karke bht tareekon se verification dikhaya hai 
+ke sahi se record add hua ya nhi hua, kya sahi se hmlog access kr pa rhe hain ya nhi kr pa rhe hain.
+
+lec 112(DEPRICATED-mat padho esko)
+k8s me mujhe ni pta tha ke 'LoadBalancer' naam ki bhi service hoti(basically ye Classic loadbalancer deploy krti hai aws me) hai(abtk mje nodePOrt,clusterIP, yahi pata thi)
+in this lec ek service ki manifest hai(of type LoadBalancer) usme annotation me external-dns-name diya hai so that jb ye manifest chale to route53 me record add hojaega
+aur LoadBalancer service deploy hojae
+
+
+<------------------------------->
+<------------------------------->
+<------------------------------->
+<------------------------------->
+lec 113
+[IMPORTANT ARCHITECTURE] NAME based Virtual Host Routing
+Agar external-dns hmne configure kar rakha hai i.e LEC-109-110 ko implement kr rakha hai
+to fir jaise jo ingress service vala manifest hai usme hm context based rules dete the? under rules:
+
+to fir esme slight change hai yahi pe ,basically pehle rules: me hmlog directly http likhte the ab ,http ke just pehle ek - host: nam ka block aagya hai
+jisme hmlog DNS record ko specify krenge i.e new sub-domain hm denge
+
+ rules:
+    - host: app101.stacksimplify.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: app1-nginx-nodeport-service
+                port: 
+                  number: 80
+				  
+				  
+ then we can directly give the sub-domain name  which we want 
+aur annotation block me simply bas default-page ka link de skte hain .(LIKE THIS:  external-dns.alpha.kubernetes.io/hostname: default101.stacksimplify.com )
+githublink: https://github.com/harshitpandey8587/aws-eks-kubernetes-masterclass/blob/master/08-NEW-ELB-Application-LoadBalancers/08-09-NameBasedVirtualHost-Routing/kube-manifests/04-ALB-Ingress-HostHeader-Routing.yml
+
+Lec 114 
+ingress service manifest ko deploy karke dikhaya hai sath me trh trh ke verification dikhaye hain, k bhaiya dkh lo sb ache se deploy hogya hai.
+
+<------------------------------->
+<------------------------------->
+<------------------------------->
+<------------------------------->
+Lec115
+so ye maan ke chalte hain ke external-dns to hmne configure krke rakha hai(lec 108-109) (all that service account blah blah blah)
+to hmlog ingress service manifest me annotation me apne ACM ke certificate ka ARN mention karte the.
+so that hme SSL vala tala dikhayi parde.
+
+but agar hmlog Host-header-based-Routing(i.e lec 113-114 me jo seekha hai) ka use kr rhe hain to fir hmlog vo annotation hata skte hain ingress service manifest se
+bcz host: me jb hm domain name de he rhe hain to fr ssl certificate vo automatically fetch kr leta hai hmare sub-domain ke liye.
+
+what we only need to do is we have to add this in 
+spec:
+	tls:
+	  - hosts:
+		- "*.stacksimplify.com"
+		
+		ye krne ke bad we can comment ACM vala annotation from ingress service within annotaion block
+<------------------------------->
+<------------------------------->
+<------------------------------->
+<------------------------------->
+Lec118
+abtk hmlog backend pe 3 apps ko manage kr rhe the,but ingress service manifest ek he thi
+usi me sare rules,annotaions, etc etc sb likh rhe the ek akeli bechari ingress service manifest me
+but suppose production me 50 apps hon backend me sbki apni apni rules ,sub-domains, health-checks n ol hon to?
+tb to bht confusion hojaega ek akeli ingress service manifest me
+
+vse lec dkhloge to bht ache sesmjh ajaega, mtlb maza aagya hai mje smjh kr
+dkho 3 apps hain backend pe right? to teen alag alg ingress service manifest banengi ab
+bas har ingress service manifest ke annotaions me mention krna hoga ke ye kis INGRESS GROUP ka part hai ye manifest
+LIKE THIS:
+    alb.ingress.kubernetes.io/group.name: myapps.web
+    alb.ingress.kubernetes.io/group.order: '10'
+
+suppose 3 app hain agar backend me to fir ingress-group bas merge kr deta hai teeno ingress service manifest ko and kul milakr ek he ALB banta hai
+mtlb ki just confusino clear hojae, kam krne me problm na ho, sb kam organized way me hon eslye har backend app ka ek alag 
+ingress service manifest banana hai abse(along with their deployment.yml and service.yml)
+
+NOTE: PRIORITY ORDER set krna hota hai har ingress service manifest ka.
+
+https://github.com/harshitpandey8587/aws-eks-kubernetes-masterclass/tree/master/08-NEW-ELB-Application-LoadBalancers/08-12-IngressGroups/kube-manifests
+sir ke es gitub link pe ingress group ki yml available h
+
+NOTE: teeno he ingress service manifest me AWS LOADBALANCER ka nam same he dalna hai
+bcz ingress group bas organiz krne k liye hai
+
+Infact hmare case me to sub-domain vala part bhi same he rakha hai teeno he ingress service manifest me i.e
+ ( external-dns.alpha.kubernetes.io/hostname: ingress-groups-demo601.stacksimplify.com )
+
+We can add any number of rules in our ingress service manifest 
+
+
+Recursively agar manifest ko deloy krna ho to -R tag laga dete hain
+kubectl apply -R -f kube-manifests
+
+
+<------------------------------->
+<------------------------------->
+<------------------------------->
+<------------------------------->
+
+ALB-Ingress-Target-type
+by-defaul is instance mode he laga hota hai ingress service me(we dont explicitely define it) i.e ALB ke pas request ati hai to vo corresponding nodeport service ki trf route krta hai,then vaha se request POD ki trf route hoti hai
+but in case of Target-type: IP
+yaha pe ALB ko jo bhi request ati hai vo directly pod ki ip pe chali jati hai
+
+Target-type: IP is required for sticky sessions to work with Application Load Balancer
+
+we need to explicitely define it in ingress service annotaion like this:
+  # Target Type: IP
+    alb.ingress.kubernetes.io/target-type: ip  
+
+ab socho mere man me bhi ye ques aya ke jab ALB se request directly pod ip pe route ho rhi hain to why do we need to define k8s service(like nodePort or clusterIP?)
+but sir ne bataya hai ke nahi, har haal me we have to define one service( may be nodePort or clusterIP)
+bcz then only ingress can create target groups in you ALB
+
+es bar hmlog ne NodePort ki jagh clusterIP service ka use kiya tha.so after manifest execution when we hit kubectl get svc
+we see the clusterIPs of our pods
+
+In order to get the IP of our pods we will have to write kubectl get pods -o wide
+similarly we can verify the same on aws console that jo ALB bana hai usme target groups me jakr, we need to verify ke pod ki ip mentioned hai ya nhi
+
+
+<------------------------------->
+<------------------------------->
+<------------------------------->
+<------------------------------->
+
+Lec122
+Internal ALB
+ingress service manifest me annotation me ek jagh pe 'alb.ingress.kubernetes.io/scheme: internet-facing' likha tha now we need to change it to 'internal'
+but this internal ALB cannot be test from outside internet, so we need to deploy a curl command pod in our k8s so as to test internal Load Balancer Endpoing using curl command
+
+
+There is a series of commands ,dkh lo lec directly
+dhyan rhe ingress manifest me se SSL related annotations(ACM vale,listener 443 vale etc etc) hatane honge bcz internal loadbalancer ki bat ho ri hai yaha
+
+
+Lec123
+after deployment of manifests(3deployment.yml,3 service.yml, and one ingress-service.yml)
+
+ek curl pod create kiya hai, us curl pod ke andar jakr hmare internal ALB ke url ko ping kiya hai content verify kiya hai that sahi se aa rha hai ya nhi
+below is the manifest of curl pod creaton
+apiVersion: v1
+kind: Pod
+metadata:
+  name: curl-pod
+spec:
+  containers:
+  - name: curl
+    image: curlimages/curl 
+    command: [ "sleep", "600" ]
+
+
+kubectl get ingress
+we will see the endpoint of our internal LB,
+
+then using these commands curl pod ke andar jakr alb ke url ko hit kiya hai
+# Will open up a terminal session into the container
+kubectl exec -it curl-pod -- sh
+
+# We can now curl external addresses or internal services:
+curl http://google.com/
+curl <INTERNAL-INGRESS-LB-DNS>
+
+# Default Backend Curl Test
+curl internal-ingress-internal-lb-1839544354.us-east-1.elb.amazonaws.com
+
+<------------------------------->
+<------------------------------->
+<------------------------------->
+<------------------------------->
+lec 125
+Fargate ka intro hai, aur spec bataye hain
+only pay for compute resources that you use. suppose 4 pods banaye hain fargate pe to there will be 4 fargate profile worker nodess will be created.
+fargate me ek pod jo hai vo akela ek fargate instance pe chalta hai.
+
+jaise eks with ec2 me cloud-controller hota tha(in control plan)? vse he eks with fargate ke liye we have Fargate-controllers which runs parallel and this is only
+responsible for scheduling pods on fargate profiles.
+
+We can directly  bring our existing pods and deploy them on fargate but the only thing is we need to check regarding Fargate considerations
+Sort of limitations smjh lo, Fargate considerations below link pe mil jaegi
+https://docs.aws.amazon.com/eks/latest/userguide/fargate.html
+
+some examples of fargate considerations:
+Privileged containers aren't supported on Fargate.
+Each Pod that runs on Fargate has its own isolation boundary. They don't share the underlying kernel, CPU resources, memory resources, or elastic network interface with another Pod.
+Network Load Balancers and Application Load Balancers (ALBs) can be used with Fargate with IP targets only. 
+GPUs aren't currently available on Fargate.
+You can't mount Amazon EBS volumes to Fargate Pods.
+
+10-12 points ki list hai directly dkhlo jakr 
+
+EKS Deployment options
+1.	only ec2 nodegroups (managed ec2 nodes)
+2	mixed (managed ec2 nodes and fargate nodes)
+3	only fargate (only fargate profiles)
+
+EKS with ec2 me hmlog public and pvt subnet dono me he ec2 instances bana skte the
+but fargate me fargate profiles are only created in pvt subnet.
+
+Host:pod ratio is 1:1
+
+Lec 126
+[IMPORTANT ARCHITECTURE]
+BDSNA.
+
+(https://github.com/harshitpandey8587/aws-eks-kubernetes-masterclass/tree/master/09-EKS-Workloads-on-Fargate/09-02-Fargate-Profiles-Advanced-YAML)
+
+
+Makesure to upgrade your eksctl every 15-20 days bcz bht frequently updates atey h usme,
+Fargate me nodePOrt service ka koi concept nhi hota hai eslye Ingress service yml file me target-type: ip hona chaiye.
+Ab pods par traffic jae hmara uske liye hme koi na koi Loadbalancer to chaiye he hoga(jaise we use to install aws load balancer controller which is responsible
+for installing ALB for our cluster )
+we will verify our pods of external-dns(ye default namespace me hota hia) and ingress-controller-pod i.e AWS-load-balancer-pod(ye kube-system namespace me hota hai)
+
+Suppose do AZ me kam horha hai, so dono AZ ke pub subnet me to NAT gateway deployed hain.
+and dono AZ ke pvt subnet me we will deploye a Fargate profile (with name fp-dev)
+So hmare pub subnet me to 
+
+Lec 127
+vaise to ye lec bhi dkhoge tbzyada clarity aegi but still commands likh diye hain maine.
+
+Suppose we want to know if there are any existing fargate profiles
+eksctl get fargateProfile --cluster <cluster-name>
+
+eksctl create fargateprofile --cluster <cluster_name> \
+                             --name <fargate_profile_name> \
+                             --namespace <kubernetes_namespace>
+
+
+# Replace values
+eksctl create fargateprofile --cluster eksdemo1 \
+                             --name fp-demo \
+                             --namespace fp-dev
+
+
+  
+
+
+In this yml file namespace is very imp , why bcz fargateProfile create krte time hmne yml me namespace define kr diya hai.
+to ab jb bhi koi deployment.yml will be executed with this namespace(mtlb deployment.yml ki metadata me ye namespace mention kr diya agr),
+to jo bhi pods banenge vo fargateProfile ke banenge.
+
+FargateProfileExecutionRole is created by-default whenever we create our first FargateProfile in our eks cluster
+
+It is super-required that we provide resources: request: cpu: memory:  and limits: for our fargate profile pods
+esko ek trh se mandatory he smjh lo tm .
+Since hmlog ek mixed env me kam kr rhe hain eslye nodePort ki bhi service.yml banayi hui hai. agar sirf fargate pe kr rhe hote to service.yml ki zrurt na pdti.
+
+jo ingress-service.yml me annotaion: me hmlog target type define krte hain like this: (alb.ingress.kubernetes.io/target-type: ip)
+ye chiz hmlog service level par bhi kar skte hain, mtlb ki jaise jo nodePort service.yml hai usme bhi define kr skte hain instead of ingress ki service file me
+
+Vaise jb bhi mixed env me kam hona ho to fr nodeport service.yml file me he define krna target-type ko, ideally yhi krna chaiye
+
+
+Lec 128
+github pe yaha pe sabhi manifest pardi hai dekh lo(https://github.com/harshitpandey8587/aws-eks-kubernetes-masterclass/tree/master/09-EKS-Workloads-on-Fargate/09-01-Fargate-Profile-Basic/kube-manifests)
+jb hmlg ye sb manifest ko execute kr denge
+to fir hmare ec2-nodes bhi deploy hojaenge 
+aur 2 fargateprofile bhi deploye hojaenge(bcz deployment me replicas: 2 dali thi)
+
+kubectl get nodes -o wide execute krenge jb
+to total 4 nodes dikhenge jisme se 2 ke prefix me 'fargate' likha hoga aur baki do ke me simple node dikhenge
+
+# List Namespaces
+kubectl get ns
+
+# List Pods from fpdev namespace
+kubectl get pods -n fp-dev -o wide
+
+# List Ingress
+kubectl get ingress -n fp-dev
+
+# Access Application
+http://fpdev.kubeoncloud.com/app1/index.html
+
+
+# How to delete fargateprofile(ye command maine lecture se dkh kr uthaya hai lec 128 at 7 min ,github ke readme me nhi diya hua hai)
+eksctl delete fargateprofile --cluster <cluster-name> --name <Fargate-Profile-Name> --wait
+NOTE: jb hmlog fargateprofile ko delete kr dete hain, to fir asal me ye hota hai ke jo pods the hmare vo hmare normal ec2-worker-nodes pe schedule hojate hain automatically
+mtlb ki bas fargateprofile delete hoti hai,underlying pods nhi.
+
+<----------------------------------->
+
+Lec129
+[IMPORTANT ARCHITECTURE] of mixed mode
+
+
+
+In this lec we are going to Deploy 3 Apps in a mixed Mode
+2 Apps to 2 different Fargate Profiles
+1 App to EKS EC2 Manged Node Group
+
+Abhi tk hmne jo fargateProfile banayi thi vo using eksctl command line se banayi thi(usme problem ye thi ke agar n number of fargateProfile banani hoti to fir n number times cli command runkrna pdta)
+but ab hmlog yml file se eksath do fargateProfile banaenge
+
+
+bht acha architecture hai ,dkh zrur lo.
+2 fargateprofile banaenge hmlog(ek user-management-service and APP2)
+2 fargate profile kliye hmlog separate 2 ingress-service.yml(one for UMS one for APP2) banaenge aur ec2-worker-nodes ke liye hmlog separate ingress-service.yml banaenge
+
+to jo UMS vali fargateprofile hai uski apni alag nodePort Service hogi,uski apni alag ExternalName service hogi(basically to connect with AWS RDS)
+Similarly APP2 fargateprofile ki apni alag nodeport serviceyml hogi 
+
+ExternalDNS service bhi deploy krni hogi so that hmlog DNS records ko explicitly add kar saken inour route53 and based on given inputs by us.
+
+
+
+
+
+
+hmlog ne 3 apps ko (deployed in mixed mode) access krne ke liye 3 alag-alag ingress files banayi
+why cant we use a single ingress serviceyml file and route the traffic based on context-path url?
+we cant do that because Ingress-cross-namespace is not yet supported in K8s as of now.
+
+
+Lec130
+(https://github.com/harshitpandey8587/aws-eks-kubernetes-masterclass/tree/master/09-EKS-Workloads-on-Fargate/09-02-Fargate-Profiles-Advanced-YAML)
+eksctl.io/usage/    <- es link pe jakr hmlog apiVersion: ka current version check kr skte hain kisi bhi yml file ka
+
+Step1
+yml file for deploying fargate profiles:suppose es below file ka naam ye hai: 01-fargate-profiles.yml
+
+apiVersion: eksctl.io/v1alpha5
+kind: ClusterConfig							<------ alag hai yaha pe kch, we are creating fargateprofile but dkho yaha p ClusterConfig likha hai
+metadata:
+  name: eksdemo1  # Name of the EKS Cluster
+  region: us-east-1
+fargateProfiles:
+  - name: fp-app2
+    selectors:
+      # All workloads in the "ns-app2" Kubernetes namespace will be
+      # scheduled onto Fargate:      
+      - namespace: ns-app2
+  - name: fp-ums
+    selectors:
+      # All workloads in the "ns-ums" Kubernetes namespace matching the following
+      # label selectors will be scheduled onto Fargate:      
+      - namespace: ns-ums
+        labels:
+          runon: fargate   
+
+Imp
+while defining the fp-ums fargateProfile we have given namespace as well as labels: eska mtlb hai jo bhi resources me dono he chize present hongi bas vhi resource
+es fargate profile ke andar aenge i.e name shoud bhi ns-ums as well as label should be runon: fargate (Ex- hmlog ko externalDNS ki yml file banani pdegi
+for our ns-ums fargate profile,to usme hmne namespace aur labels dono he mention kiye hain. We will see that yml file in this lec itself)
+
+Step2.
+Now we will run this yml file using eksctl command    <---- this is something diff from previous manifest executions.
+eksctl create fargateprofile -f kube-manifests/01-Fargate-Advanced-Profiles/01-fargate-profiles.yml
+
+
+Step3.
+jo app1 app2 ums vali deployment aur unki nodeport service ki jo yml files hain unme sabme namespace banakr mention kr diye hain
+
+Sir ne es lec me sari yml files dikhayi hain ek ek karke aur jaha jaha bhi changes induce kiye hain vo sb bhi dikhaya hai.(changes as in inducing namespace etc)
+
+Step4
+abtk hmara fargate profile ban chuki hongi.which we created in step 2
+we can verify that
+# Get list of Fargate Profiles in a cluster
+eksctl get fargateprofile --cluster eksdemo1
+
+# Delete Fargate Profile
+eksctl delete fargateprofile --cluster <cluster-name> --name <Fargate-Profile-Name> --wait
+eksctl delete fargateprofile --cluster eksdemo1 --name fp-app2 --wait
+eksctl delete fargateprofile --cluster eksdemo1 --name fp-ums --wait
+3-5 min lgta h ek fargate profile ko delet ehone me, make sure to write --wait while deleing fargateprofiles
+
+
+Lec131
+sbhi yml files ko deploy krke test krke dikaya hai(i.e teeno app ke liye unki deployment, service,ingress yml files)
+if you want to see all the ingress across all the namespaces then typ
+kubectl get ingress --all-namespaces
+
+Sir ne nslookup <sub-domain.domain-name.com> karke verify to krva diya ke sare apps sahi se up and running hain
+but sir ne ye bhi smjhaya hai ke kbi kbi yml files ko bar bar delete and re-create krne se dns related issues ajate hain(basically route53 caching issues ajate h kbi kbi)
+
+so to cross check that jo nslookup ke results aa rhe hain vo sahi hain bhi ya nhi ,eslye sir ne directly ALB (total 3 alb bane the)me jakr uske url uthaya
+aur nslookup me chala ke dkh liye hai
+
+like this nslookup <alb-url>
+
+<------------------------------->
+<------------------------------->
+<------------------------------->
+<------------------------------->
+
+
+Network LOAD Balancer
+
+
+
+<------------------------------->
+<------------------------------->
+<------------------------------->
+<------------------------------->
+
+Lec142
+[IMPORTANT Architecture]
+k8s cluster ecr se images kaise pull karta hai ye sb architecture me dikhaya hai
+pehle mje laga tha externalName service ka use kiya hoga but main galat tha, the images are pulled via the NAT gateways deployed in the public subnet of k8s cluster
+
+Lec143
+es lec me kiya kuchn nhi hai bas terminologies batayi hain ecr ki(ye sb pehle se heata h mje,ke repos hoti hain ecr me,push pull ke commands hote hain)
+docker login krna hota hai,docker install krna pdta hai in order to use CLI
+
+Lec144
+me docker image banane k command run kiye hain
+and then locally he us image ko run krke dekha hai.
+(https://github.com/harshitpandey8587/aws-eks-kubernetes-masterclass/blob/master/10-ECR-Elastic-Container-Registry-and-EKS/README.md)
+
+docker build -t <ECR-REPOSITORY-URI>:<TAG> . 
+docker run --name <name-of-container> -p 80:80 --rm -d <ECR-REPOSITORY-URI>:<TAG>
+
+simply docker container run kr diya hai aur localhost pe check kr ke dikha diya hai
+
+ECR repo banate time ek option ata hai vulnerabilities ko scan krne ka ,if we enable it to fr ecr me jb image push kr dete hain hmlog to ECR me vulnerabilities check
+hokr ek report ready hojati hai infront of our image
+it is a good feature.
+
+
+Lec145
+Sir ne image push kr di thi ecr me , ab sir ne dikhaya hai ke enhone manually k8s ke deployment me jakr image ko change kr diya hai
+secondly jo nodeport ki service.yml thi usme annotations: alb.ingress.kubernetes.io/healthcheck-path: /index.html 
+
+kr diya hai
+
+Verify that ec2 worker nodes ke IAM role me ecr se images push pull krne ke liye policies attached hain ya nhi
+
+Lec146
+Simply sabhi manifest(deployment,service,ingress ki yml file) ko execute krke , aws console pe ALB TG Listenrs,Route53 DNS records wgreh verify krva diye hain.
+sub-domain.domain-name.com pe jakr ye dikha diya hai k sahi se image deploy hogyi hai k8s cluster me.
+
+<------------------------------->
+<------------------------------->
+<------------------------------->
+<------------------------------->
+
+Lec147
+AWS me CI/CD ko 6 min me bht ache se smjhaya hai,dkhlo directly lec he, bcz notes nhi hai es lec me bas diagram ke sath fatafat smjhaya hai
+
+Lec148
+Es lec me kch bhi practical nhi karaya hai bas ye btaya hai ke agle lec me kya kya krenge hmlog
+We will write a buildspec.yml which will eventually build a docker image, push the same to ECR Repository and Deploy the updated k8s Deployment manifest to EKS Cluster.
+To achive all this we need also create or update few roles
+STS Assume Role: EksCodeBuildKubectlRole
+Inline Policy: eksdescribe
+
+CodeBuild Role: codebuild-eks-devops-cb-for-pipe-service-role
+ECR Full Access Policy: AmazonEC2ContainerRegistryFullAccess
+STS Assume Policy: eks-codebuild-sts-assume-role
+STS Assume Role: EksCodeBuildKubectlRole
+
+Lec149
+esme bas ye check kiya hai AWS-load-balancer-controller and externalDNS deployed hai hmare cluster me ya nhi
+Then ek ecr repo banayi hai bas
+
+Lec150
+codecommit me repository banakr dikhayi hai
+jo bhi code hai ex- docker image,k8s manifest ,etc etc vo sb hmlog code-commit me push kr dete hain
+now ab code-commit repo to bana li,but now we need security credentials for this code-commit
+uske liye sir apne IAM user me gye(i.e kalyan nam ka tha unka personal IAM user),then security-credentials me jakr ek option ata hai
+"security-credentials for code-commit"  -> then click on 'Generate Credentials'
+
+Step3
+comeback to code-commit repo and copy the url <git clone ... >to clone this repo to our local sytem
+
+Step4
+so pehle locally repo ko clone kr lenge then us local folder me jakr:
+
+ek docker file hai jisme Nginx ki image hai and it copies 'app' folder from local system 
+app folder ke andar index.yml hai
+
+we will also create kube-manifest folder in our local repo, this kube-manifest will have deployment,service,ingress ki yml files\\
+We will also create buildspec.yml file there
+
+ye sb create krke code-commit ki repo me push kr denge via these commands:
+git status
+git add .
+git commit -am "1 Added all files"
+git push
+git status
+
+
+
+Lec150
+Ye lec BDSNA(kai commands hain jo run kiye hain )
+code-build he hai jo hmare code ko build krta hai and image ko k8s cluseter me deploy krta hai.
+(https://github.com/harshitpandey8587/aws-eks-kubernetes-masterclass/blob/master/11-DevOps-with-AWS-Developer-Tools/README.md)
+ 
+but for that we need to create STS Assume IAM Role for codebuild
+
+4-5 commands run kiye hain in order to create STS Assume Role,crate policy and attach it to role( github ke page se directly dkh lo)
+
+
+EKS Cluster me ek config-map hota hai ,its name is aws-auth
+So the role which we created just above we need to mention it in aws-auth config-map
+
+Basically aws-auth name ki jo config-map file thi cluster me,usme ek role add kr diya hai
+enhone cli commands ke through kiya hai eslye dkhne me complicated lag bhale rha hai but vaise ye complicated chiz nhi hai.
+
+Lec151
+[IMPORTANT ARCHITECTURE]
+code-build ka pura architecture smjhaya hai.
+
+CB compiles our source-code, run unit-tests and produces artifacts.
+code-build provides us diff pre-packaged-build-env  for diff prog lang and tools like Maven,gradle infact we can customize CB to induce our owns build-tools etc
+
+Lec152
+[IMPORTANT ARCHITECTURE]
+practical kch nhi karaya hai lekin code-build ka architecture detail me cover kiya hai
+notes banana possibe nhi tha.lEc dkh lo directly
+
+Lec153
+ye lec maine khud 2-3 bar dkha hai tb jakr thoda thoda smjh aya hai.
+BDSNA
+The env variable that are required for our CB are 
+REPOSITORY_URI = 180789647333.dkr.ecr.us-east-1.amazonaws.com/eks-devops-nginx
+EKS_KUBECTL_ROLE_ARN = arn:aws:iam::180789647333:role/EksCodeBuildKubectlRole
+EKS_CLUSTER_NAME = eksdemo1
+
+Es lec me buildspec.yml  ko explain kiya hai, format smjaya hai.
+dkh lo imp h 
+
+
+
+hmare jo deployment ki manifest this usme jaha pe container ki image define krte the like this image: <image-url>
+vha pe manifest me value ki jagh pe CONTAINER_IMAGE likha hua hai. like this image: CONTAINER_IMAGE
+and buildspec.yml me bhi ye likha hua hai:
+- echo "Update Image tag in kube-manifest..."
+- sed -i 's@CONTAINER_IMAGE@'"$REPOSITORY_URI:$TAG"'@' kube-manifests/01-DEVOPS-Nginx-Deployment.yml
+
+
+
+
+Earlier when aws supported docker images were not there then we use to install multiple packages(like kubectl,eksctl,awscli etc etc)
+ by giving them in 'command:' section of buildspec.yml
+but ab 'aws docker images for codebuild' etna google kroge ,then official doc pe jaoge to github khulega aur usme pre-built dockerfile mil jaegi vha pe
+
+Dockerfile me 'AWS related jo bhi tools(ex- awscli,eksctl etc,aws-iam-authenticator)' downlaoding ke instructions ho usme dkh lena k hmlog ke latest version likha hua hai ya nhi
+
+So kul milake aisa hai ke buildspec.yml me jo command: naam ka section hai uske andar kch bhi nhi likhna hia hme bcz mostly sbkuch already installed hota hai pehle se he
+Notes banana band kr diye h es lec bcz possible ni tha buildspec.yml ko bas explain kiya hai es lec me
+
+ya to jo es github link pe buildspec.yml file padi hai usko gpt pe dal ke explaination dkh lo vo zyda simple rhega
+and format ka bhi idea lag jaega
+
+
+Lec155
+es lec me aws console pe codePipeline bana kr dikhayi hai
+stephan ki trh steps hain  to notes banana possible nhi hai but lec dkh zrur lo tbhi smjh aega
+bcz beech me code-build ke liye hmlog ko ek project banane ka option ata hai and usko create krna pdta hai while passing the env variables etc etc .
+
+jo env variable dalne hain vo code-build ka project create krte time dalne hain
+bcz I  guess codePipeline me bhi env Variable ka option tha vhi pe but usme nhi daale hain env variable sir ne
+
+Sir ne deploye stage ko skip kar diya hai, bcz buildspec.yml me  he mention kr diya tha post_build: me that kubectl -f apply <kube-manifest.yml>
+Secondly eslye bhi codeDEPLOY vale step ko skip kr diya hai bcz usme EKS nam ka koi option bhi nhi show ho rha tha.
+
+Ek chiz aur, sir ne janbujkar ke ye codepipeline fail kari thi, because last me we see some error related to GetAuthorizationToken operation
+
+
+
+
+
+Lec157
+actually me problem ye thi ke jo code-build ka project banate time jo service role banaya tha hmne, usme ECR ko access krne ki policies nhi added thi
+Then code-build me jakr, service role me gye, usko select krke ecr ka full access de diya usme
+
+RELEASE-CHANGE ye option select krdene sehmari codePipeline manually run hojati h
+
+
+Ye pipeline firse ekbar fail hojaegi because hmne code-build ke liye jo STS Role banaya tha usko code-build me attach to kahi kiya he nahi hai
+Lec 148 me check kro, 2 IAM role banane ka zikr hua hai i.e one is STS Assume Role and another is IAM ROLE for code-build
+
+WE need to update code-build-role to have access to  STS ASSUME ROLE(which we created using STS ASSUME ROLE POLICY)
+
+Now how to give it? ye alag hai bhaiya ekdm
+GOTO IAM ROLE,choose policy, then choose create Policy
+then CHOOSE A SERVICE => search for STS
+in ACTION => select ASSUMEROLE(Write vale block ke andar milega ye option)
+in RESOURCES => select specific role arn and pass the code-build vala iam role ka rolearn
+
+vhi vala rolearn jo abhi env variables me set kiya tha while creating the code-build project
+Then last me es policy ka naam dedo koi sa bhi aur save kr do ye policy 
+
+
+Now go to codebuild service role(ary vhi role jo abhi code-build ka project banate time hmlog ne banaya tha ,usme bas ye policy jakr add krdo)
+
+eske bad jb hm manually apni pipeline ko run krenge to vo chal jaegi
+then sir ne verify krke dikha diya hai , that dekho cluster me pods create hogye hain,route53 me entries aagyi hain.
+alb create hogya hai, hmara dns entry is working perfectly on browser as our kube-manifests have been deployed succesfully on cluster.
+
+Lec 158
+
+code-build me he ek option hota hai goto Build-details ka
+usme jakr artifacts dhundhna ,usme artifacts ki location ka url mil jaega ,,i.e basically s3 url hai vo where our artifacts are stored
+sir ne sb verify kra ke dikha diya hai ke dkhoo jo bhi artifacts aye hain those were mentioned in build-logs(jinhe hm realtime me monitor kr rhe the)
+
+Then ek new dns name add krke dikhaya hai in our kube-manifest of ingress-service.yml file
+comma laga kr diya hai  new dns
+like this: 
+#Before
+    # External DNS - For creating a Record Set in Route53
+    external-dns.alpha.kubernetes.io/hostname: devops.kubeoncloud.com   
+
+#After
+    # External DNS - For creating a Record Set in Route53
+    external-dns.alpha.kubernetes.io/hostname: devops.kubeoncloud.com, devops2.kubeoncloud.com
+
+then pipeline run krke dikha di hai , ke successfully run hogyi
+then k8s manifest wgreh sb delte krdiya hai
+pipeline bhi delte kr diya hai
+ecr repo delte kri hai and
+IAM roles jo banaye the vo bhi delte kriye haal
+
+<------------------------------->
+<------------------------------->
+<------------------------------->
+<------------------------------->
+
+Lec 159
+bas basic intro diya hai microservice ka
+
+Lec160
+[IMPORTANT ARCHITECTURE]
+pura workflow dikhaya hai microservice ka ,jo hmlog design krne vale hain
+like server side
+
+pvt subnet me hmare 2 worker nodes honge(one in each pvt subnet)
+ek workernode k andar do microservice hongi
+one UMS(usermanagerment service),other is NS(notification service)
+UMS ke liye ingress-service.yml honi chaiye bcz it will face endclient using load balancers etc
+sath me externalName service ki madad se RDS me data update deletekrna hoga
+
+NS ke liye ek clusterip-service.yml honi chaiye
+aur ek SMTP ki externalNAme service
+
+
+Lec161
+Pre-requisites batayi hain sir ne, that externalDNS(ye default namespace me banta hai, lec107 me kiya tha hmlog ne.) and aws LB controller should be deployed.
+Along with the in this particular use case of microservice, we are trying to send email notifications to the users
+
+ek RDS db instance should be up and running.
+
+
+so SES setup krne ke liye we need SES server ka link(aws console pe miljaega)
+we need to generate SMTP credentials(on aws console)
+Also we need to verify our email ids, from aur to ke liye we neeed to verify them.
+sbkch lec me dikhaya hai, tension mt lo
+
+Lec162
+es lec me manifest dikhayi hain basically related to UMS
+(https://github.com/harshitpandey8587/aws-eks-kubernetes-masterclass/blob/master/12-Microservices-Deployment-on-EKS/README.md)
+
+sbse pehle RDS se interact krne k liye jo externalName service chiaye uski yml file dikhayi hai
+and jo NS vali deployment file hai usme ek env variable hai AWS_SMTP_SERVER_HOST uski value me hmari smtp externalName service ka nam dal diya hai
+to es trh se apas me deployment ko aur externalName service ko link kiya hai.
+
+Lec163
+NOw hmari UMS vali jo deployment file hai, it needs to call NS-deployment file, using clusterIP service.
+so for that it(UMS microservice) will basically call the cluster-ip service and then clusterIP service will call the NS vali microservice or say NS microservice ka pod.
+SO practically hua ye hai ke jo UMS vali deployment file thi, vo pehle jasii he thi i.e usme RDS instance ke bare me env variables defined the(jaisa ki pehle ki ums deployment.yml files me hmne dekha hai)
+NOTIFICATION-SERVICE-HOST: notification-cluster-ip-service and NOTIFICATION-SERVICE-PORT: 8096 ye dono env variable add kr diye hain
+
+Notification service port ko 8096 he q liya hai sir ne ye check krlo gpt pe
+
+Ye annotaions(present in ingress yml) main janbujkr copy kr rha hun yaha, jisse bar bar nazr pade aur yad hojaenge
+  annotations:
+    # Load Balancer Name
+    alb.ingress.kubernetes.io/load-balancer-name: eks-microservices-demo
+    # Ingress Core Settings  
+    #kubernetes.io/ingress.class: "alb" (OLD INGRESS CLASS NOTATION - STILL WORKS BUT RECOMMENDED TO USE IngressClass Resource)
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    # Health Check Settings
+    alb.ingress.kubernetes.io/healthcheck-protocol: HTTP 
+    alb.ingress.kubernetes.io/healthcheck-port: traffic-port
+    #Important Note:  Need to add health check path annotations in service level if we are planning to use multiple targets in a load balancer    
+    alb.ingress.kubernetes.io/healthcheck-interval-seconds: '15'
+    alb.ingress.kubernetes.io/healthcheck-timeout-seconds: '5'
+    alb.ingress.kubernetes.io/success-codes: '200'
+    alb.ingress.kubernetes.io/healthy-threshold-count: '2'
+    alb.ingress.kubernetes.io/unhealthy-threshold-count: '2'  
+    ## SSL Settings
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443}, {"HTTP":80}]'
+    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:us-east-1:180789647333:certificate/d86de939-8ffd-410f-adce-0ce1f5be6e0d
+    #alb.ingress.kubernetes.io/ssl-policy: ELBSecurityPolicy-TLS-1-1-2017-01 #Optional (Picks default if not used)    
+    # SSL Redirect Setting
+    alb.ingress.kubernetes.io/ssl-redirect: '443'
+    # External DNS - For creating a Record Set in Route53
+    external-dns.alpha.kubernetes.io/hostname: services.kubeoncloud.com, ums.kubeoncloud.com
+
+
+
+
+NS microservice ki jo deployment file hai usme ek jagh ye entioned hai
+ spec:
+      containers:
+        - name: notification-service
+          image: stacksimplify/kube-notifications-microservice:1.0.0
+          ports:
+            - containerPort: 8096
+          imagePullPolicy: Always
+
+This imagePullPolicy ka mtlb hai, k kbhi bhi image uthao to node me pardi hui existing image mt uthao,always go to docker hub and fetch the most recent image.
+
+
+
+Lec164
+IN this lec all 7 manifest will be deployed
+# List Pods
+kubectl get pods
+
+# User Management Microservice Logs
+kubectl logs -f $(kubectl get po | egrep -o 'usermgmt-microservice-[A-Za-z0-9-]+')
+
+# Notification Microservice Logs
+kubectl logs -f $(kubectl get po | egrep -o 'notification-microservice-[A-Za-z0-9-]+')
+
+# External DNS Logs
+kubectl logs -f $(kubectl get po | egrep -o 'external-dns-[A-Za-z0-9-]+')
+
+# List Ingress
+kubectl get ingress
+
+Then postman me jakr env create kiya hai so that we can thoroughly test these deployed microservices
+Sir ne lecture number bhi mention kiya hai, that postman ko jb pehli bar configure kiya tha to es lec me kiya tha.
+
+sir ne finally demo krke dikhaya h that postman se we can hit the createUserApi in UMS microservice,and ultimately it will ping our clusterIp service there by pinging NS service
+due to which we get email notification in our emails.
+
+
+
+IMP: jb bhi hm externalName service banate bhi (and suppose pvt subnet me hmare pods hain.) to bhi request 
+pehle externalName ko jati hai,then vaha se NAT gateway me, then vaha se ultimately us service pe jisko hm call krna chahte hain
+
+Lec165
+3 tarah se we can update the image in our eks deployment
+1. set-image option(voi cli command jo pehle padha tha)
+2. kubectl-edit
+3. update manifest and kubectl-apply
+
+Es link me last me commands diye hue hain
+https://github.com/harshitpandey8587/aws-eks-kubernetes-masterclass/blob/master/12-Microservices-Deployment-on-EKS/README.md
+
+kubectl set image deployment/notification-microservice notification-service=stacksimplify/kube-notifications-microservice:2.0.0 --record=true
+es command me jo 'notification-service' likha hai, vo kch nhi h, hmare container ka naam hai.
+
+--record=true kr diya hai esi ki vjh se rollout history me ye vala rollout reflect hoega.
+once we do:  kubectl rollout history deployment/notification-microservice then hme dkhne ko milega
+
+IMp: default deployment strategy is rolling update. so we will not have a downtime if we change the image
+but we can also customize further this rolling update stragtegy like how much percent or how many pods should get the new load etc. like this
+
+
+<------------------------------->
+<------------------------------->
+<------------------------------->
+<------------------------------->
+Lec166
+AWS X-Ray
+used for analysing and debugging complex applications built using microservice architecture
+we can understand how our app and its undrlying services  are performing to identify and troubleshoot the root cause
+provides end-to-end view of the request as they travel through our app and shows a map of our application's underlying components.
+can be used to analyse simple 3 tier apps as well as complex microservice apps with thousands of services
+
+we can discover request behavior
+we can debug issues using xray
+
+it collects data from each underlying application services it passes through
+xray combines gathered data from each microservice  into singular untis called traces
+we see the traces on service map(that pictorial representation , sbhi services ke aps me kya links hain etc etc )
+we also have 'Analyze issues' phase where we can go deep down into a trace and see the flow and what is exactly happening in it.
+
+X-Ray related agent hme deploye krna pdega apne k8s clyster me,we can deploy that using K8s Daemon sets
+basically we call it daemonset pod
+
+
+Lec167 
+[IMPORTANT ARCHITECTURE]
+DaemonSets
+A DaemonSet ensures all or some nodes run a copy of a DaemonSet pod
+whenever a new node is added(via clusterAutoscaler) a pod configured as daemonset(aka DaemonSet pod) will be added to that node
+and whenever an existing node is scaled-in then those pods are deteletd
+Deleting a daemonset will cleanup all the pods configured on all the nodes.
+
+Some typical uses cases of DaemonSet are:
+1. running a 'logs collection daemon'  on every node(ex- fluentd)
+2. running node monitoring daemon  on every node(like cloudwatch agent)
+3. running an application  trace collection daemonset on every node(AWS X-ray)     <- this we will be doing as part of this series of lec
+
+In simple case, ek DaemonSet hoga, for covering all nodes and for each type of daemon. (99% cases me ye use hota hai)
+
+In more complex setup: may be multiple DaemonSet would be deployed for single type of daemon ,but with diff flag/diff memory/diff cpu request /diff h/w types
+
+I am writing down architecutre
+So suppose do worker node hain.
+to we deploy a daemonset (that will deploy daemonset POD on each worker node)
+We also need to deploy XRay-ClusterIP-Service(so that other resources can interact with the daemonset pods)
+
+UMS vali jo pods hain usme we deploye Xray SDK related configuration,
+which means these pods are configured in such a way that jo bhi request traffic wgre sb hoega vo sb kch in the form of traces hmare DaemonSet pods(it can goto any daemonset pod deployed on any node)
+(i.e UMS pod in workernode2 can send the traffic logs in the Daemon-pod deployed on workernode-1 and vice versa and this is bcz of Standard X-Ray ClusterIP Service) me chala jaega
+ and then DaemonSet-pods se info X-Ray service of aws me chali jaegi
+
+Lec168
+[IMPORTANT ARCHITECTURE] 
+Microservice distributed tracing with AWS X-Ray from a network design perspective 
+and also we will see X-Ray service map and traces
+
+whenever we deploy and X-Ray as a DaemonSet,it is going to created X-Ray pods per worker node and then it is going to expose that X-Ray pod using X-Ray ClusterIP
+
+In this architecture, X-Ray ki ek alg se microservice define karni pdegi
+UMS and NS me X-Ray related code likh diya hai with SDK to enable the xray tracing for only this https://ums.kubecloud.com/usermgmt/notification-xray microservice
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<------------------------------->
+<------------------------------->
+<------------------------------->
+<------------------------------->
+
+Lec179
+[[IMPORTANT ARCHITECTURE]]
+
+We are going to deploy a default kubernetes matrix server, where the pod metrics will be sent to from the pods to the k8s matrix server
+
+When we enable HPA for our application it queries the  "kubernetes matrix server" at every 15 sec ,then it calculates 
+the no. of replicas it needs to create then it scales the pod replicas accordingly
+Es pure process ko CONTROL LOOP kehte hain.
+
+Scale-out hone me jo new pods banenge unki bhi to metrics hongi vo automatically kubernetes matrix server me jane lagengi
+
+HPA(Horizontal POD Autosclaer)
+we need to execute this command: 
+kubectl autoscale deployment <deployment-name> --cpu-percent=50 --min=1 --max=10
+
+Lec180
+# Verify if Metrics Server already Installed
+IMP: dhyan se dkho to kube-system nam ke namespace me sir ne install kiya hai
+kubectl -n kube-system get deployment/metrics-server
+
+# Install Metrics Server , agar install krna hai to sir ne ek link diya hai jaha se latest version ka link hmlog de skte hain.
+
+kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.3.6/components.yaml
+ye kar lene ke bad matrix-server nam ka ek pod ban jata hai hmare kube-system namespace me
+
+
+
+# Verify
+kubectl get deployment metrics-server -n kube-system
+
+Simple ek deployment aur ek service ki yml file hai es lec me.
+but qki hmare worker nodes are present in pvt subnet eslye we cannot access them directly,
+i.e hmlog ne kubectl get nodes -o wide kiya to ,but ec2 ki public IP nhi reflect hui,just bcz ec2 was in pvt subnet
+(However agar ALB wgreh bhi configure kiya hota to externally bhi acces kr lete)
+anyways HPA ko test krne k liye cpu-utilization badhanaa hai hme naa ki externally access krke
+
+# Describe HPA
+kubectl describe hpa/hpa-demo-deployment       <- dhyan se dkho thoda alag hai command hpa/<deployment-name> likha hai
+esi command se hme apne worker node ki cpu utilization ka pata chalta hai
+
+ 
+# List HPA
+kubectl get horizontalpodautoscaler.autoscaling/hpa-demo-deployment           <- dhyan se dkho thoda alag hai command ,
+esi command se hme apne worker node ki cpu utilization ka pata chalta hai
+
+
+Lec181
+Es lec me apache-bench command ki madad se worked node par load dalna dikhaya hai.
+# Generate Load
+kubectl run --generator=run-pod/v1 apache-bench -i --tty --rm --image=httpd -- ab -n 500000 -c 1000 http://hpa-demo-service-nginx.default.svc.cluster.local/
+ya to lec dkh kr ye command smjhne ki koshish kro ya fir gpt se dkh lo
+
+Default cooldown period is 5 minutes.
+Once CPU utilization of pods is less than 50%, it will starting terminating pods and will reach to minimum 1 pod as configured.
+
+k8s  ke further versions(1.18) se HPA ke declarative methods ajaenge mtlb ki HPA ke liye proper yml file likh kr ache se declare krna hoga
+
+GPT se maine HPA ki ek yml file le hai
+apiVersion: autoscaling/v2beta2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: your-hpa
+  namespace: your-namespace
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: your-deployment
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 70
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 180
+      policies:
+      - type: Pods
+        value: 2
+        periodSeconds: 30
+    scaleDown:
+      stabilizationWindowSeconds: 180
+      policies:
+      - type: Percent
+        value: 10
+        periodSeconds: 60
+		
+		
+<------------------------------------------------------->
+<------------------------------------------------------->
+<------------------------------------------------------->
+<------------------------------------------------------->
+<------------------------------------------------------->
+Lec182
+VPA(Vertical POD autoscaler)
+unlike HPA(which is a default k8s resource),VPA needs to be installed explicitely in our cluster
+
+lec183
+VPA ke demo dene k liye sir ne jo normal deployement hota hai usme
+resources:
+  requests:
+	cpu: "5m"
+	memory: "5Mi"
+	
+bas 5mebibytes memory li hai,jisse ache se vpa ka demo de saken.
+
+
+
+apiVersion: "autoscaling.k8s.io/v1beta2"
+kind: VerticalPodAutoscaler
+metadata:
+  name: kubengix-vpa
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: vpa-demo-deployment
+  resourcePolicy:
+    containerPolicies:
+      - containerName: '*'
+        minAllowed:
+          cpu: 5m
+          memory: 5Mi
+        maxAllowed:
+          cpu: 1
+          memory: 500Mi
+        controlledResources: ["cpu", "memory"]
+		
+		
+lec184
+yml file hai VPA ki usko smjhaaya hai and then execute kiya hai uske bad
+kubectl get vpa
+
+<------------------------------------------------------->
+<------------------------------------------------------->
+<------------------------------------------------------->
+<------------------------------------------------------->
+<------------------------------------------------------->
+
+Lec185
+ClusterAutoccaler
+It basically scales out when required and  scalesin when there are underutilized worker nodes
+Just intro diya hai cluster Autoscaler ka 1 min me es lec me aur kch nhi hai
+
+VPA ki trh esko bhi explicitely install krna pdta hai.
+
+Lec186
+BDSNA
+we have to make sure that worker nodegroup banate time --asg-access hmlog ne diya tha ya nhi diya tha
+Nodegroup ka jo IAM role hai usme jo IAM policy hai usko verify krke dikhaya hai that ASG access hai hmare nodegrup ke IAM role ke pas
+
+(1)# Deploy the Cluster Autoscaler to your cluster
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/autoscaler/master/cluster-autoscaler/cloudprovider/aws/examples/cluster-autoscaler-autodiscover.yaml
+
+Ye above command run kr dene se hmare k8s me (kube-system namespace me) clusterAutoscaler ka ek deployment ban jata hai
+
+(2)now we have add the cluster-autoscaler.kubernetes.io/safe-to-evict annotation to the deployment
+kubectl -n kube-system annotate deployment.apps/cluster-autoscaler cluster-autoscaler.kubernetes.io/safe-to-evict="false"
+
+(3)eske bad clusterAutoscaler ki ek deployment file ban kr ajati hai , we need to perform certain changes inthat file like mentioning our clustername
+and adding these two parameters as stated belo
+ - --balance-similar-node-groups
+ - --skip-nodes-with-system-pods=false
+ 
+(4)Then we need to Set the Cluster Autoscaler Image related to our current EKS Cluster version
+
+
+Ye link hai github page ka(https://github.com/harshitpandey8587/aws-eks-kubernetes-masterclass/tree/master/17-EKS-Autoscaling-Cluster-Autoscaler)
+yaha se directly padh lo commands qki usme zyada elaborative way me smjh aega
+
+ye lec vaise bhi BDSNA
+
+Make sure to Set the Cluster Autoscaler Image related to our current EKS Cluster version
+
+
+
+Lec187
+clusterAutoscaler ko scale-in karne k liye hmekuchnhi krna pdta hai,jaise jaise replicas kam hoti jatihain vo automatically scale-in kr leta hai.
+Es lec me ek deployment execute kiya hai, deployment me jo container hai uske resources:
+requests:
+	cpu: 200m
+	memory: 200Mi
+	
+	rakhi hai ,jisse jo bhi pod bnega vo by default es config ke sath bnega atleast.
+	
+Then manually kubectl scale command ki help se replicas increase kr di hain: kubectl scale --replicas=30 deploy ca-demo-deployment 
+
+esse ye hoga ke ek worker node pe jab already kai pods ban jaenge to clusterAutoscaler automatically dusra worker node create kr dega
+aur hmare upcomig pods uspe ban jaenge
+
+but remember ke eksctl create node group command me ek jagh pr hm --nodes-max=<value> dete hain
+to agar hmare pods ke scaleout hone ki vjh se already worker nodes max number ban chuke hain to remaining pods jo bhi banne hain vo sb scheduling mode me chale jaenge
+
+
+ek chiz aur dhyan rakhna ke ye jo clusterAutoscaler ki deployment file hmlog ne install kari this
+usko jb bhi access krenge to deployment.app/<cluster-autoscaler> karke karenge
+i mean ye koi simple si deployement file nhi hai jo hmlog kubectl get deployment <deployement-name> likh kr fetch kar len
