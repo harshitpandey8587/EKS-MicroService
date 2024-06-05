@@ -1,0 +1,712 @@
+EBS
+
+• If you want to add another EBS volume to an Ec2 instance, then you must create the volume in the same AZ as of EC2.then you can attach it.
+• EBS snapshot means , make a backup(snapshot) of you EBS volume at a point in time.Can copy snapshot accross AZ or Region
+• There is a recycle bin fo EBS snapshot, if accidental deletion happens then we can recover it from there.We need to initialize it first.
+ Ek volume ec2 se bhi jurda hota hai , which we call as root volume, it gets deleted when ec2 is terminated, so we can also prevent that volume, 
+ like ec2 delete hobhi jay etb  bhi koi bat nahi, while launchinng 
+ the instance , click on advance and select "Delete on Termination" to false.
+<------------------------------------------------>	
+
+AMI
+
+You can launch EC2 instances from:
+• A Public AMI: AWS provided
+• Your own AMI: you make and maintain them yourself
+• An AWS Marketplace AMI: an AMI someone else made (and potentially sells)
+
+<------------------------------------------------>
+
+EC2 Instance Store (They are fast but temporary storage I mean fast to hai but usually recommended for Temporary storage)
+
+• EBS volumes are network drives with good but “limited” performance
+• If you need a high-performance hardware disk, use EC2 Instance Store
+• Better I/O performance
+• EC2 Instance Store lose their storage if they’re stopped (ephemeral)
+• Good for buffer / cache / scratch data / temporary content 
+• Risk of data loss if hardware fails
+• Backups and Replication are your responsibility
+
+
+<------------------------------------------------>
+EBS Multi-Attach – io1/io2 family
+We can attach a EBS to multiple EC2 instances only and only if it is a part of io1/io2 family
+• Attach the same EBS volume to multiple EC2 instances in the same AZ
+• Each instance has full read & write permissions to the volume
+• Use case:
+	• Achieve higher application availability in clustered Linux applications (ex: Teradata)
+	• Applications must manage concurrent write operations
+	<--------------------------------------------------------->
+
+EFS – Elastic File System
+• Managed NFS (network file system) that can be mounted on many EC2(chahe same region me hon ec2 ya chahe na hon)
+• EFS works with EC2 instances in multi-AZ
+• Only supports Linux instances(POSIX)
+• Highly available, scalable, expensive (3times of the cost of gp2), pay per use
+• Use cases: content management, web serving, data sharing, Wordpres
+• Compatible with Linux based AMI (not Windows)
+
+For More Details Visit PPT
+
+Lec 54= I have not done Handson , it was quite tricky.(But can be tried later)
+
+<------------------------------------------------>	
+Lec 55 (Refer PPT for detailed Exp)
+EBS vs EFS vs EC2 Instance Store
+
+EBS- EBS volumes network drives that can be attached to only one instance at a time and are locked at the Availability Zone (AZ) level. In EBS We do have to give
+a tentative storage amount (i.e if we rent 8gb and use 2 gb out of it ,still we will have to pay for 8 gb)
+
+EFS- Mounting 100s of instances across AZ.  Only for Linux Instances (POSIX). Although you only pay for what you use still EFS has a higher price point than EBS
+
+Instance Store- It is to get max amount of IO but if you lose the instance then you lose the data
+
+<------------------------------------------------>	
+
+Lec 58
+ELB (Elastic Load Balances)
+
+Why to use Load Balancer?
+Spread load across multiple downstream instances 
+• Expose a single point of access (DNS) to your application
+• Do regular health checks to your instances
+• Separate public traffic from private traffic
+• High availability across zones
+ 
+ 
+Types of load balancer on AWS
+AWS has 4 kinds of managed Load Balancers
+• Classic Load Balancer (v1 - old generation) – 2009 – CLB (Supports HTTP, HTTPS, TCP, SSL (secure TCP) )
+• Application Load Balancer (v2 - new generation) – 2016 – ALB  (Supports HTTP, HTTPS, WebSocket )
+• Network Load Balancer (v2 - new generation) – 2017 – NLB (Supports TCP, TLS (secure TCP), UDP
+• Gateway Load Balancer – 2020 – GWLB (Operates at layer 3 (Network layer) – IP Protocol )
+
+Note- Our EC2 instance will only allow traffic which is coming from Load Balancers(In this way an inhanced security feature is implemented by AWS)
+
+<------------------------------------------------>	
+
+Application Load Balancer (v2)
+• Application load balancers is Layer 7 (HTTP)
+
+What are Target Groups in ALB?
+Ans• EC2 instances (can be managed by an Auto Scaling Group) – HTTP• ALB are a great fit for micro services & container-based application 
+(example: Docker & Amazon ECS)
+
+Traffic can be routed by our Load Balancer( i.e ALB )based on URL, It does not matter that our data in on-premise/cloud. 
+An example of hybrid is shown in the lecture.
+
+Imp Point about ALB: Application servers dont see the client IP directly. The true IP of the client(i.e person who wants to visit some website)
+ is going to be inserted
+instead in the header called X-Forwarded-For.
+Kul milake aisa smjh lo our client IP is directly interacting with the load balancer. 
+Where ALB terminates the connection and then establish a new connection from its (Load Balancer IP , its a private IP)
+side to the actual application server.
+And if App server wants to know the actual IP of the client then he must look at the extra headers at the HTTP  request X-Forwarded-Port and Proto
+
+<------------------------------------------------>	
+Network Load Balancer(Layer 4) allow to:
+• Forward TCP & UDP traffic to your instances
+• Handle millions of request per seconds
+• Less latency ~100 ms (vs 400 ms for ALB
+NLB has one static IP per AZ, and supports assigning Elastic IP
+• NLB are used for extreme performance, TCP or UDP traffic and it is not included in the AWS free tier
+
+Target groups which are supported by Network Load Balancers are:
+• EC2 instances
+• IP Addresses – must be private IPs
+• Application Load Balancer
+
+<------------------------------------------------>	
+
+Gateway Load Balancer
+Esme koi bhi client jo hmari website ko access krna chahta hai, first his request goes through the Gateway load balancer.
+Then from there it reaches a Target group which contains 3rd party instances (Ex- firewalls etc)
+If the target group finds the request genuine then they are routed back to the Gateway LB, and then from there the request is given to the actual website server
+
+But if in case Target group does not find that access request right ,then the requests are dropped right away
+
+Target groups which are supported by Network Load Balancers are:
+• EC2 instances
+• IP Addresses – must be private IPs
+
+Note: it is extremly difficult to do hands on of Gateway Load Balancer thats why Tutor skipped it
+
+<------------------------------------------------>	
+
+Sticky Sessions
+Jaise ek user ne kuch request kiya ,uski request ek EC2 instance pe fulfil hogyi via load balancer
+next time he wants his request to be hosted by the same EC2 instance.
+So as to save the session time out etc
+For such uses Sticky Sessions are used (via cookies). Refer PPT/Lec for further clarity
+
+However using Sticky sessions my bring imbalance toyour load.
+
+
+Eske handson me Stephan ne dikhaya hai ke kisi bhi request ko browser ke console pe kaise dekhte hainn
+jaise network /cosole etc, fir GET request ko kaise dekhte hain aur smjhte hain
+
+<------------------------------------------------>	
+
+Lec 68
+
+SSL/TLS Certificate
+Code Signing Certificate ki research yad hai?bas ye vahi chez hai
+• An SSL Certificate allows traffic between your clients and your load balancer 
+to be encrypted in transit (in-flight encryption)
+• SSL refers to Secure Sockets Layer, used to encrypt connections and TLS refers to Transport Layer Security, which is a newer version.
+• Nowadays, TLS(Transport Layer Security) certificates are mainly used, but people still refer as SSL	
+
+Refer Lec to know how to add a SSL certificate into your AWS account
+Chahe Amazon se khareed lo,chahe manually details upload kr do of already existing certificate, ya chahe kisi third party (Comodo, Symentac, GoDaddy etc) se lekr upload krdo
+
+Ab naya tareeka aagya hai ke ek he web server pe agar ek se zyada website hosted hain to unke liye alag alag SSL certificate upload krne ka 
+bhi system aagya hai, Stephane ne revise kiya hai ye lecture. do visit to know more.
+SNI(Server Name Indication)
+
+
+
+
+<------------------------------------------------>	
+
+
+Lec 70
+ASG
+Launch Configuration ka nam badal kr Launch Template hogya hai
+Launch Template consist info about:-
+• AMI + Instance Type
+• EC2 User Data
+• EBS Volumes
+• Security Groups
+• SSH Key Pair
+• IAM Roles for your EC2 Instances
+• Network + Subnets Information
+• Load Balancer Information
+
+The name is ASG because it is paired with alarms(given by CloudWatch) sothat  Scaling activity can be performed at the backend itself
+
+<------------------------------------------------>	
+
+Lec 71 is very good for practical hands on but uske liye ALB(Application load balancing ka handson pehle krna hoga)
+Maine ALB ka handson vala instance deletekr diya tha thats why dubara se create nahi kiya
+still you must try handson once again.
+
+The types of aws resources(Target Groups) that are supported in ALB are:
+Target Groups
+• EC2 instances (can be managed by an Auto Scaling Group) – HTTP 
+• ECS tasks (managed by ECS itself) – HTTP 
+• Lambda functions – HTTP request is translated into a JSON event
+• IP Addresses – must be private IPs
+• ALB can route to multiple target groups
+
+
+
+Lec 72
+ASG scaling policies is discussed.
+kitne type ki hoti hain, kya kya parameters hote hain through which we can scale in/out our ASG.
+
+
+Lec 73
+If you want to increase the CPU utlization manually , for example 100% then watch this lecture
+In this lecture handson of ASG scaling policy implementation is shown.
+
+<------------------------------------------------>	
+
+
+VPC Flow Logs
+Anytime you  have a network issue, you need to trouble shoot it, then you must visit the FLow logs
+They give out network traffic logs
+<------------------------------------------------>	
+
+VPC Peering
+• Connect two VPC, privately using 	AWS’ network
+• Make them behave as if they were 	 in the same network
+• the two different VPC (who wants to get clubbed)Must not have overlapping CIDR (IP address range)
+• VPC Peering connection is not transitive (must be established for each VPC that need to communicate with one another
+
+VPC Summary:
+• VPC: Virtual Private Cloud
+• Subnets: Tied to an AZ, network partition of the VPC
+• Internet Gateway: at the VPC level, provide Internet Access (Suppose hm chahte h ke pvt subnet vala ec2 bhi internet se bat kr paye so for that we will deploy a NAT Gateway in PUBLIC subnet and then pvt subnet se us NAT gateway me ek route define krna pdega, then all set
+• NAT Gateway / Instances: give internet access to private subnets
+• NACL: Stateless, subnet rules for inbound and outbound
+• Security Groups: Stateful, operate at the EC2 instance level or ENI
+• VPC Peering: Connect two VPC with non overlapping IP ranges, non transitive
+• VPC Endpoints: Provide private access to AWS Services within VPC
+• VPC Flow Logs: network traffic logs
+• Site to Site VPN: VPN over public internet between on-premises DC and AWS
+• Direct Connect: direct private connection to a AWS
+
+
+
+<------------------------------------------------>	
+VPC Endpoints are very imp , if you need private access from within your VPC to an AWS Service
+Endpoint allow you to connect to aws services using a PRIVATE NETWORK instead of public www network
+Usually hme ye nai pta hota hai that : kbi kbi ec2 instance hai ya koi bhi xyz service hai and us xyz service ko kisi aur aws ki service se interact krna
+hota hai to they only make use of public internet.(as we know aws ki sbhi services public hain ,right?)
+but what if hmara ecc2 instance he agar ek pvt subnet me ho tb?now we dont want to access other aws services(s3 and dynamodb bas enhi do ki bat hori hai)
+ using public network? and we only want to access
+other aws services via a pvt network ? in such cases VPC Endpoints comes to our rescue
+<------------------------------------------------>	
+Suppose your pvt subnet ec2 instance wants to interact with some aws service(other than s3 and dynamo) then we must setup vpc endpoint interface inside the pvt subnet
+ so that ec2 can interact with clouwacth etc etc
+
+suppose anytime if we want to privately access any aws service from within our pvt subnet then we must setup ENI 
+
+
+How to connect you on-premise data center to  Cloud , to understand this visit lecture 106 slide number 210 in PPT
+
+
+Typical 3 tier solution architecture
+Please do visit Slide Lec-208 or Slide 213 because it is very very very imp to understand all the concepts coupled together.
+Kuch dekho na dekho ye ek min ka lecture zrur dekh lena, where Load balancer, ASG, private subnet,DNS Route53 sb show kiya hai ek diagram me
+
+
+<------------------------------------------------>	
+Lec85
+
+Route 53 
+Public vs private Hosted Zone is explained in Lec85
+
+They both work exactly the same way the only difference is that The Public Hosted Zone allows anyone from the internet 
+to query your records(obviously public records ex google.com etc)
+While in case of Private Hosted Zone, the query is only made from the private resources(within VPC) in order to get fulfilled 
+the request within the private network itself(i.e A VPC)
+
+<------------------------------------------------>
+
+If you want to install nslook up and dig in you linux terminal window visit lecture- 
+yum install bind-utils -y
+
+fir uske bad we can write: dig <any domain name>
+it will show us what type of record it is, to which IP it is mapped to.
+
+jiska practical lecture 89 me dikhaya hai.
+Basically Route 53 ke maine notes nhi banaye hain. PPT se padhunga directly.
+However the topics covered are- purchasing a domain(Sudhanshu.com), defining  a record(indexpage.sudhanshu.com / userpage.sudhanshu.com), accessing a record from public internet etc.	
+<------------------------------------------------>	
+
+S3 Bucket stuff included
+Normal handson
+Versioning and its handson
+Encryption of objects at server side and client side and its handson
+Using S3 bucket to host static website
+CORS(Cross origin Resource sharing)
+<------------------------------------------------>	
+
+AWS Lambda 
+To study this, lecture 271 is imp. As the overview is given of Lambda
+<------------------------------------------------>	
+
+Lambda fn is also attahced with ALB(Application load balancer, I have done hands on of this lecture) 
+
+<------------------------------------------------>	
+Lec 279
+
+The whole purpose of lambda asynchronous invocations fn is that we do not have the results back to us.
+We dont see the results in lambda asynchronous invocations, we are able to see the results of such fns using CloudWatch logs.
+We do not call such fn i.e lambda asynchronous invocations using console, rather we do call them using AWS CLI
+
+Study the diff between asynchronous invocations and synchronous invocations of lambda fn from you own using some other websites as well for better clarity.
+
+Handson bhi acha karaya hai es lec me, Although I got the understanding still AWS CLI ka use tha eslye I dint try ,but I understood completely.
+<------------------------------------------------>	
+
+
+Lec-281
+Handson of Integrating Lambda with AWS EventBridge (This approach falls under asynchronous invocation of Lamda fn)
+
+Hmne ek Lamda fn banaya,fir EventBridge khol kr usme ek new rule banaya and we attached our Lambda fn within that rule.
+ Plus we also specified CRON duration
+i.e kitni kitni der me ye fn call hoega bar bar (example after every one minute)
+Now after creating that rule ,we see that our fn is called as per our Event Bridge rule(i.e. after every one minute)
+We can also attach a dead letter in asynchoronous i.e above mentioned approach (i.e ke mtlb bas 2-3 retry he krna agr fn fail hota hai to , uske bad terminate kr dena)
+
+I have performed the handson of this lecture
+<------------------------------------------------>	
+ 
+Lec 282
+Ye mere kam ka hai,Considering Vishal's project 
+i.e Connecting Lambda fn invocation with S3 using S3EventNotifications
+
+Jaise s3 me jab bhi hm koi item create/update/restore/delete etc krte hain to us case 3 type ke notification ka use hm kr skte hain
+1. Pehla hai SNS, fir SNS ke through further kam kar skte hain jo be demand me ho.
+2. Dusra hai SQS ,fir us SQS se apne lambda fn ko invoke kr skte hain
+3. Amazon S3 Event Notification -> so as to directly invoke our Lambda fn. (asynchoronous approach)
+<------------------------------------------------>	
+
+
+Lec 283
+Actual project video
+
+Maine ek Lambd fn banaya hai, fir ek bucket banayi hai jise public kr rkha hai
+apart from this , us bucket ke properties me jakr ek option ata hai Event notification ka
+There we will create a notification while attaching our Lambda fn in it
+(sath me options bhi denge i.e Creation k time pe ya updation of objects ke time pe etc etc)
+Sath me vahi pe prefix/suffix bhi set kr skte hain while creating the event notificaiton
+Make sure that VERSIONING is enabled in your S3 bucket tbhi kam chalega
+Make sure the lambda fn and s3 bucket same region me honi chaiye
+<------------------------------------------------>	
+
+Lec 284
+
+After looking at synchronous and asynchoronous lambda invokation we will look at the last category of "How Lambda can process events in AWS "
+ i.e Event Source Mapping
+Es Lecture ki theory nahi smjh ayi.
+Lec 285 me Practical implementation dikhaya hai of Event Mappers(i.e SQS and Kinesis)
+Ye dikhaya hai that how can we integrate our Lambda fn with the SQS and Kinesis
+Practical to dekhne se smjh aagya
+<------------------------------------------------>	
+Lec 286
+In asynchoronous invocation of Lambda fn , we dont get to see the results
+Due to which it was bit difficult to find whether our Lambda fn was successfully executed or not
+To rescue such situaions LAMBDA- DESTINATIONS came into the picture.
+
+With Lambda Destinations we can send the: 
+if it is succeded we can send it to the successful event destination
+if it is failed we can send it to the failed event destination
+<------------------------------------------------>	
+Lec 287 me bas hands on dikhaya hai that an S3 bucket is attached to a Lambda fn , usme ek destination add kr di hai
+Destination me jakr do SQS instances banaye hain, one for success and one for failure.
+To usi tarah sejab jab Successfuly execute hojata hai Lambda(which is triggered by uploading a file in s3 bucket) to success SQS me ek msg ajata hai
+Similarly failure k liye bhi hota hai
+<------------------------------------------------>	
+Lec 288 and Lec 289 are about Lambda IAM roles and  Resource policies
+<------------------------------------------------>	
+Lec 293 Lambda Monitoring & X-Ray Tracing - Hands On
+<------------------------------------------------>	
+Lec 294 Networking related to Lambda I mean VPC related stuff of Lambda
+This lecture is very very very informative and important for basic understanding.
+4 minute ka lecture hai, dekh lo. bohot kuch clear hojaega
+
+How Lambda can access internet? How lambda fn can access DynamoDb
+By default Lambda cannot communicate with your VPC resources since Lambda fn is defined in AWS Owned VPC.
+
+You can refer slide number 600 in PPT as well
+
+I have done the handson shown in Lec 295
+<------------------------------------------------>	
+Lect=307Lambda code ke versions hmlog set kr skte hain, jaise dev /prod /test
+aur unke aliases bana skte hain 
+jaise test env jo hai vo es specific version ko point krega.
+fir kaise dhere dhere percentage me load shift krte hain production environment ka ek version se 
+dusre version pe ye sbdikhaya hai lambda container image ke bad ke lectures me
+
+Code deploy is used with lambda fn to shift the load from one alias variant and to another alias variant of lamba fn.
+For this lect 308 me appspec.yml file dikhai hai ke kaise kya chaiye hoti hai inorder to use code deploy for shifting the load
+<------------------------------------------------>	
+How to use your lambda fn as an http endpoint without using api gateway  or  any load balancer
+lect 309: Lambda fn URL ko access krne k liye kya kya IAM roles and permissions chaiye hoti hain vo sb dikhaya hai es lect me, imp hai but mje smjh kam kam aya
+lect-310: Function URL ko add krna sikhaya hai (
+with no authenticatinoon)
+
+Best practices while working on lambda are given in lect 313
+
+<------------------------------------------------->
+CI/CD of AWS(Lec 360 in new version of lectures)
+
+CodeCommit ke backend pe Git chalta hai.
+
+Main stages hote hain pehle codecommit me code dalo, fir CodeBuild se integrate kro, fir CodeDeploye se use jaha man ho vaha deploy kr do, 
+fir es pure process ko automate krne ke liye codepipeline bana do.
+
+
+CodeCommit me repo bana lene ke bad master branch ban jati hai apne ap i.e default branch is master branch.
+Agar kai sare developers ko kam krna hota hai to unke liye alag branch bana skte hain.
+
+PR ka mtlb hai ke agr koi developer apne code ko master branch se merge krna chahta hai, to vo PR raise krta hai
+Ab Master branch ko main branch kaha jata hai. aisa likha hai lecture: 363 me
+Codecommit me nyi branch banana jaise Dev etc dikhaya hai
+Previous commits kaha se dkhte hain ye sb, commits ko compare kaise krte hain ye sb bhi dikhaya hai 363 me
+
+CodeCommit ke he section me Settings me jakr hm repo ki details dkh skte hain ,jaise ARN ,Repo ID.
+Fir vahi settings mejakr hm notificaiton set krte hain ,jaise kisi bhi type ka event ho repo pe to SNS notificaiton ajae via email or some other way.
+
+
+
+Lec 364 me dikhaya hai ke kaise Git ke credentials generate krte hain for our CodeCommit in IAM users.
+Imp lect hai pehle nai ata tha mje aisa kch,
+  
+
+
+
+Triggers bhi set kr skte hain hmlog CodeCommit me , i.e ke jaise he koi code push hoe repo me to ya to SNS chal jaye ya fir koi particular Lambda fn
+run hojaye.
+Triggers hm CodeCommit me settings hai uski madad se kr skte hain.
+Make sure ke AWS CI/CD ki settings alag hoti hai aur COdeCommit ki apni settings alag hoti hai.
+ CodeCommit vali settings uski k andar hoti hai.
+
+Git ke commands show kiye hain ke kaise koi file add krte hain apni local system me aur fir kaise use Commit krte hain aur CodeCommit pe push krte hain.
+
+Git status
+git add .
+git status
+git commit -m "Commit name"
+git push
+
+
+
+<------------------>
+Code Pipeline (Lec 367 revised series ka bht imp hai)
+Source of the Code in Code Pipeline can be: my code is in codecommit,or say we have a docker image in ECR,or say my code is in s3/Github,Bitbucket
+Build Tools can be: CodeBuild ,Jenkins, CloudBees, TeamCity
+Testing Tools that can be used: CodeBuild , AWS Device Farm, 3rd party tools.
+Deployement can be on: CodeDeploy, Elastic Beanstalk , CloudFormation, ECS, S3 ,..etc etc.
+Invoke: To invoke a lambda fn or step fn.
+<------------------>
+
+
+
+
+
+
+
+LEc 365(new verion) me ek basic pipline ke bare me bataya hai jaise koi bhi code codecommit pe jata hai to pipeline us code ko s3 me push krti hai
+then S3 se he vo sara content COdebuild me jata hai.
+
+Anything that is created out of the pipeline is call Artifacts, 
+to we can say that whenever developer pushes a code in codecommit->artifacts are stored in s3
+
+Lec 366 me elastic beanstalk ke do environment banaye hain(ek ka nam env rakha hai dusre ka prod) so that codepipeline me jo deployment hai use Elastic beanstalk me kr paye.
+
+367 me basic pipeline dikhayi hai with manual approval, aur sath me test environment se prod pe kaise deploye krte hain ye b dikhaya hai.
+<------------------------------------------------>	
+Lec 370(Revised series, Es Lecture me alag alag chizon ke integration ke bare me bhi bataya hai in CodePipeline, v imp lec)
+Agar apne code pipeline me CodeCommit ki jagah Github ka use krna hai 
+In that case how do you have an event driven starting of CodePipeline??
+Well to do so, you will have to use an aws resource named as CodeStart Source Connection	(This is going to connect github to AWS)
+it is just a fancy name for Github.
+
+
+
+CodeBuild ka alternative Jenkins CI hai, Codebuild is an integration tool,
+Jaise Docker Hub ka alternative ECR(Elastic container registry hota hai vaise he CodeBuild ka alternative Jenkins CI hota hai)
+
+Lec 371
+Code Build ko use krne ke liye hmare source code ke root directory me "buildspec.yml" file ka hona zruri hai. (Buildspec.yml gives instruction to CodeBuild)
+Instructions can also be given on console but agar buildspec.yml hogi to zyada better hoga.
+buildspec.yml file kaisi dikhti hai it is shown in lect 371
+
+
+CodeBuild jo hai ,vo ek tarah ka container chalata hai.to ab ya to predefined image hoti hai us container me(that image support is given by AWS) ya fir
+hmari apni koi docker image hoti hai. 
+
+<------------------------------------------------>	
+Lec 196
+CodeBuild uses docker in the backend to create a testing environment
+This is the reason we can use "Managed Images" while creating a CodeBuild project so that we can use ready-to-use image
+Rather than selecting the "Custom Image" where we can create our own programming/testing environment and we can provide our own custom image.
+
+By Default codeBuild is not present in your VPC
+CodeBuild ko execute hone ke liye "buildspec.yml" file hona zaruri hai
+
+
+Theek usi tarah CodeDeploy ko run krne k liye "appspec.yml" file hona zaruri hai(at the root of the code). This "appspec.yml" helps codeDeploy to understand how to deploy this application
+
+"Validate Service" is the most imp hook present in CodeDeploy
+<------------------------------------------------>	
+Lec 199 
+Code Deploy
+This lec is important incase you want to study the handson of CodeDeploy
+Sabse pehle do IAM roles banate hain , First for Code Deploy so that it can interact with EC2/Lambda etc etc jaisi bhi requirement ho.
+Dusra IAM role banate hain for our EC2 Instance so that it can interact with S3(as jo bhi hmara code hoga vo ya to s3 me store ho skta hai ya github me)
+
+Fir hm sbse pehle EC2 ka instance create kiya aur usme jakr "Code Deploy Agent" ko install kiya.
+
+Fir hmne Code deploy me jakr ek Deployment instance create kiya sbse pehle, fir usme jakr "Deployment group"  create kiya.
+ Us Deployment group me EC2 ko add kiya
+Fir hmne Code deploy k andar he ek option hota hai "Deployments" nam ka, usme jakr apne S3 ki location provide kar di aur
+ sath me Deployment group bhi select kr diya.
+
+Ab hua kya asal me? Asal me hmne S3 me jakr apne code ki zip file dal di thi. Zip file ke andr appspec.yml file pardi hoti hai
+ jo sare instructions provide krti hai
+codeDeploy ko , k akhir kaise kaise kya kam krna hai.
+
+To finally jab hm "Create Deployment" krenge to hmara code deploy ho jaega EC2 Instance pe. Jisko hm Ec2 instance ki public IP se dekh skte hain.
+
+<------------------------------------------------>	
+<------------------------------------------------>	
+<------------------------------------------------>	
+Cloud Formation:
+Kitne type ke resource hote hain(like EC2, ASG, VPC etc etc) vo es link pe mil jaega:https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-template-resource-type-ref.html
+Kisi resource ki kya kya properties hoti hain vo es link pe mil jana chaiye:https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-instance.html
+Yahi dono link he CloudFormation ki yaml file likhne me kaam aenge sbse zyada, because hme pta nai hota hai ke kya naam likhe kisi particular attribute/specification ka, to vo sb hmlog yaha se dkh skte hain.
+
+
+CloudFormation me hmlog jaise parameters bana skte hain, jo values hme stack banate type manually deni padti hai.
+parameters are like variables in programming lang. jinki value change ho skti hai.(parameters hmlog yml file me define krte hain)
+
+Conditions de skte hain , ke bhaiya agar aisa aisa hoe to he mere stack ke resources ko create krna else mt krna 
+Type of conditions supported are : AND OR NOT Equals  IF
+
+Mappings bhi hoti hain CF me i.e Mappings me vo values store  krte hain hmlog jinki value change nahi ho skti
+
+Other intrisic functions jo CF me use kr skte hain are like: Fn::GetAtt , Fn::Ref , Fn::Join , Fn::ImportValue , Fn::Sub ,Fn::FindInMap
+(Sub mtlb substitute hai, imp fn hai acha fn hai. dekh skte ho ekbar)
+
+
+Kisi bhi yml file se(stack template) sehmlog output ko  export kr skte hain, using Export keyword, aur dusri stack me vahi values import kr skte hain using ImportValue keywords in yml
+
+Rollback me do type ke options ate hain ek hai k rollback ke time sare recources delete kr do,dusra option hai ke jo jo resources sahi se ban gye hain unhe  mt delete kro
+baki jo nahi ban paye hain unhe bas rollback kr do,
+however uske bad hme vo stack delete he krna pdta hai , aisa nhi hai k jo jo resource sahi se nahhi ban paye hain unhe hm yml file se fix krke firse update kr skte hain aisa nahi hai
+but troubleshooting ke liye theek rehta hai dusra option.
+
+Drift: suppose hmne koi resource banaya using CF stack but kisi ne console mejakr manually us resource ki koi properties change kr di ya kch bhi modification kr diya to it is known as a Drif
+To detect a drift we can use CF Drift feature
+Es link pe pata chal jaega ke kon kon se resources CF Drift pe supported hain:https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/resource-import-supported-resources.html
+Drift kaise pata kren? Ans- Stack actions pe jakr "Detect Drift" select kro, then stack actions pe firse jakr "View drift results" pe click kro
+
+
+If you want to protect your production related resources from any type of tampering: refer last lecture of CF(1 min ka hai)
+CloudFormation Stack Policies
+
+if you want to know that how to write a lambda fn using cloudformation-to eska lecture lambda (Section 21 AWS Serverless Lambda)vale section me diya hua hai.
+ke kaise cf stack create kiya, aur usi stack creation ki vjh se lambda fn create hogya.
+lambda fn ka code kaha pe place krna hai ye sb us lecture me dikhaya hai
+
+<------------------------------------------------>	
+<------------------------------------------------>	
+API Gateway
+
+We can do realtime streaming throught API gateway via websocket protocol
+API Gateway can handle API versioning i.e from version 1 to version 2
+We can handle multiple environments dev test prod etc
+We can create API keys, security implementation is also very good in API gateway
+Swagger/Open API 3.0 can be used to import defined APIs and we can also export any api to swagger/open AI
+We can generate SDK and API specifications
+We can also cache API responses
+
+
+We can Expose HTTP endpoints in the backend(endpoint can be any httpd application on premisis/ or it can be ApplicationLoadBalancer that is on our cloud)
+We can expose any aws service using API Gateway(ex- start an AWS Step Function workflow, post a message to SQS)
+
+
+
+There are three ways to deploy your API Gateway(this is known as endpoint type
+1 Edge-Optimized (default): For global clients
+	• Requests are routed through the CloudFront Edge locations (improves latency)
+	• The API Gateway still lives in only one region but can be accessed by the whole world
+2 Regional: 
+	• For clients within the same region where you are defined/created your API gateway
+	• Could manually combine with CloudFront (more control over the caching strategies and the distribution)
+3 Private: 
+	• Can only be accessed from your VPC using an interface VPC endpoint (ENI)
+	• Use a resource policy to define acces
+	
+	
+API Gateway security• Custom Domain Name HTTPS security through integration with AWS 
+For userpool database,we can use Cognito
+
+Custom Domain Name HTTPS security through integration with AWS Certificate Manager (ACM)
+• If using Edge-Optimized endpoint, then the certificate must be in us-east-1
+• If using Regional endpoint, the certificate must be in the API Gateway region
+• Must setup CNAME or A-alias record in Route 53
+
+API Gateway ka handson dikhaya hai in lect 341(10 min ka hai simple and crisp) API deployment sikhaya haiusing API Gateway
+
+Deployment stages
+• Changes are deployed to “Stages” (as many as you want)
+• Use the naming you like for stages (dev, test, prod)
+• Stages can be rolled back as a history of deployments is kep
+
+API Gateway – Stage Variables
+• Stage variables are like environment variables for API Gateway
+• Use them to change often changing configuration values
+• They can be used in:
+	• Lambda function ARN
+	• HTTP Endpoint
+	• Parameter mapping templates
+• Format: ${stageVariables.variableName}
+
+
+
+API Gateway Stage Variables & Lambda Aliases
+• We create a stage variable to indicate the corresponding Lambda alias
+• Our API gateway will automatically invoke the right Lambda function
+
+Yahan pe ye lecture342/slide dekh lena to architecture smjh aajaega, basically ye kehna chah rhe hain ke api gateway ka koi stage hai 
+suppose dev , we can make it point towards dev alias lambda fn
+similarly test stage of api gateway points to test-alias of lambda fn
+
+
+
+Lect343 is life changing, mtlb pura dikhaya hai k kaise lambda ke versions and aliases bante hain (dev test prod)
+And API gateway ke har stage ko uske corresponding lambda alias se kaise link krte hain
+Sath me permission bhi add krna sikhaya hai using AWS CLI(ye mje nai ata the pehle se)
+Policy add krte time ${stageVariables.lambdaAlias} jagah DEV liya hai, ye bht imp tha jo ki mje smjh nahi aa rha tha l10n-poc me
+Basically ek resource based policy lagani hoti hai Lambda me so that it does allow apigateway to invoke the lambda fn
+
+Jaise hmlogne l10-poc project me bhi api gateway me stage variable banaya hai(env naam ka)
+Vahi sb setting krna sikhaya hai.
+
+Canary deployement
+Jaise hmlog ne lambda fn me dekha tha ke kaise thoda thoda krke traffic weight ko ek variant se dusre variant pe dalte hain
+similarly api gateway me use canary deployement kehte hain ,where we define ke kis hisab se traffic ko lambda k dusre version pe shift krte hain dhere dhere
+Lec 346 me eska handson dikhaya hai
+
+
+Websocket API is basically used for chat based architecture purpose where there is a persistent connection setup between client and server
+
+
+<------------------------------------------------>	
+<------------------------------------------------>	
+
+
+ECS
+
+2 type capacity providers hote hain ek hote hain ec2 ke sath and Fargate profile ke sath
+
+In Fargate profiles; we just create task definition, its easier to manage
+
+Suppose ek cluster banaya with ec2 in it.
+SO us ec2 instance me ECS agent install hua hota hai, aws ki services ko access krta hai ye ec2 instance (ex copying files, pulling ecr images etc, referencing
+sesitive data using secrets manager)
+There can be more than one ECS Task ROLE associated with the ec2 profile because alg alg roles can give permissions to alag alag task that we want to do.
+Task role jo hota hai vo TaskDefinition(of your ecs service) me define kiya jata hai.
+
+Jo ec2 profile hai, suppose karo uspe multiple tasks are running simultaneously,(I mean this is possible)
+Suppose hme ye tasks ko expose krna hai as http or https, then we will deploy a LOad balancer infront of ecs cluster.s
+
+Data volumes ke liye we use to deploy EFS(faster reliable and it supports both i.e ec2 profiles and fargate profiles)
+Why should i mount efs to my ecs cluster => to get get Persisten multi AZ shared storage for your containers.
+NOTE: s3 cannot be mounted as a file system to our ECS Tasks
+
+jb bhi hm ec2 profiles ke sath ecs cluster banate hian to ek ASG bhi ban jata hai along with it
+
+NOTE: stephane ne demo me ek mix cluster banaya hai i.e usne Fargate bhi select kiya and ec2 profile bhi select kiya hai while creating the cluster
+Cluster ban jane ke bad , Infrastructure pe click kroge to dikh jaega ke kis kis chiz se(fargate/fargate-spot/ec2) bana hai hmara ye ecs cluster
+If we want to intentionally start an ec2 instance in our ecs cluster to simply asg me jakr desired capacity badha do, ec2 will get launched in our cluster
+
+
+<------------------>
+Task definition
+
+we can select ke kis capacity provider pe hme apna task run krna hai i.e fargate pe ya ec2 pe ya fir dono par he?
+
+we give OS architecture, compute power i.e how many number of vcpu is required
+ and memory bi
+ 
+ A TASK ROLE: if we wanted to make api rquest to aws services. A task IAM role allows containers in the task to make api request to aws services
+ 
+ TASK EXECUTION ROLE : is used by container agent(container agent vhi jo ec2 ke andar installed hua hota hai/fargate profiles pe bhi ye hota hai) to make AWSCloudFormation/latest/UserGuide/aws-properties-ec2-instance
+ API request on your behalf.(TASK EXECUTION ROLE hme khud se nhi banana padta hai ye task defintion banate time khud se he create hojata hai)
+ <--------------------------->
+ Creating Services:
+ Task definition bana lene ke bad hme Service banani pdti hai, cluster me jakr create new service.
+Fir Compute option me Launch Type select krna hota hai: fir jaise Fargate profile hai to fargate select krna hota hai
+
+Then application type slect krna pdta hai: like service hai ya Task hai. Service mtlb a long running service jaise koi web app hosted hai, and task ka mtlb hai ke run hoe aur terminate hojae task
+
+Then service banate time he below options bhi show hote hain vhi pe:
+Select VPC, create  a new SG, then us security grp me vhi pe http traffic allow krte hain 
+
+Then ek ALB banane ka bhi option ata hai, then and there, and vhi pe target group bhi banane ka option aata hai,
+yes we are making an ALB while creating the service for our ecs cluster
+ 
+ AAge lect me logs dekhna sikhaya hai.like services ke bhi events hote hain and agar hm task ke logs dekhna chahte hain to vo bhi dekh skte hain.
+ 
+ 
+ We can increase the number of tasks running under a service.  simply service pe jakr update krne ka option hota hai use and vha pe desired task ka bas number 
+ increase kr dena hota hai
+ Basically pehle hmne ek task run kiya tha under our service to ek container ke andar jo nginx deployed the vo dikh rha tha via our alb domain name
+ but jb bad me hmne number of task increase kr diye in our service , then we are able to see that more number of containers/tasks were launched 
